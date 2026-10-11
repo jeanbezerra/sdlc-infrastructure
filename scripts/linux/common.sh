@@ -49,7 +49,7 @@ read_config() {
     local config=$1 line key value
     [[ -f $config && ! -L $config ]] || die "Arquivo de configuração ausente ou symlink: $config"
     DOMAIN=''; ACCESS_CIDRS=''; SSH_PORT=22; SSH_CIDRS='0.0.0.0/0,::/0'
-    TLS_CERT_PATH=''; TLS_KEY_PATH=''; ARTIFACT_BASE_URL=''; MANIFEST_PATH=''
+    TLS_CERT_PATH=''; TLS_KEY_PATH=''; ARTIFACT_BASE_URL=''; MANIFEST_PATH=''; ALLOW_HTTP_ARTIFACTS=false
     DB_HOST=''; DB_PORT=5432; DB_NAME=''; DB_USER=''; DB_PASSWORD_FILE=''; DB_CA_PATH=''
     declare -A seen=()
     while IFS= read -r line || [[ -n $line ]]; do
@@ -57,7 +57,7 @@ read_config() {
         [[ -z $line || $line == \#* ]] && continue
         [[ $line =~ ^([A-Z_]+)=(.*)$ ]] || die 'Use KEY=value, sem export, aspas ou espaços ao redor de =.'
         key=${BASH_REMATCH[1]}; value=${BASH_REMATCH[2]}
-        case "$key" in DOMAIN|ACCESS_CIDRS|SSH_PORT|SSH_CIDRS|TLS_CERT_PATH|TLS_KEY_PATH|ARTIFACT_BASE_URL|MANIFEST_PATH|DB_HOST|DB_PORT|DB_NAME|DB_USER|DB_PASSWORD_FILE|DB_CA_PATH) ;; *) die "Chave não reconhecida: $key" ;; esac
+        case "$key" in DOMAIN|ACCESS_CIDRS|SSH_PORT|SSH_CIDRS|TLS_CERT_PATH|TLS_KEY_PATH|ARTIFACT_BASE_URL|MANIFEST_PATH|ALLOW_HTTP_ARTIFACTS|DB_HOST|DB_PORT|DB_NAME|DB_USER|DB_PASSWORD_FILE|DB_CA_PATH) ;; *) die "Chave não reconhecida: $key" ;; esac
         [[ ! ${seen[$key]+exists} ]] || die "Chave duplicada: $key"
         seen[$key]=1
         [[ $value != *[\"\'\`\$\;\\]* && $value != *$'\t'* && $value != *' '* ]] || die "Valor inválido em $key. Use valores literais sem aspas/espaços."
@@ -94,7 +94,11 @@ PY
         [[ $TLS_CERT_PATH == /* && $TLS_KEY_PATH == /* && -f $TLS_CERT_PATH && -f $TLS_KEY_PATH ]] || die 'TLS exige caminhos absolutos para arquivos existentes.'
     fi
     if [[ $ACTION == install ]]; then
-        [[ $ARTIFACT_BASE_URL =~ ^https://[a-zA-Z0-9./_-]+$ ]] || die 'ARTIFACT_BASE_URL deve ser uma URL HTTPS sem query string.'
+        [[ $ALLOW_HTTP_ARTIFACTS == true || $ALLOW_HTTP_ARTIFACTS == false ]] || die 'ALLOW_HTTP_ARTIFACTS deve ser true ou false.'
+        [[ $ARTIFACT_BASE_URL =~ ^https?://[a-zA-Z0-9./_-]+$ ]] || die 'ARTIFACT_BASE_URL deve ser uma URL HTTP(S) sem query string.'
+        local -a url_args=()
+        [[ $ALLOW_HTTP_ARTIFACTS != true ]] || url_args=(--allow-private-http)
+        python3 "$REPO_DIR/scripts/linux/artifacts.py" check-url --url "$ARTIFACT_BASE_URL" "${url_args[@]}" || die 'CDN inválido ou HTTP não autorizado para rede privada.'
         [[ $MANIFEST_PATH == /* && -f $MANIFEST_PATH && ! -L $MANIFEST_PATH ]] || die 'Informe o MANIFEST_PATH absoluto para o manifest.json confiável gerado na preparação do CDN.'
     fi
     if [[ $SERVICE == keycloak || $SERVICE == sonarqube ]]; then
@@ -170,8 +174,10 @@ prepare_dir() {
 }
 
 fetch_artifact() {
+    local -a transport_args=()
+    [[ $ALLOW_HTTP_ARTIFACTS != true ]] || transport_args=(--allow-private-http)
     python3 "$REPO_DIR/scripts/linux/artifacts.py" fetch --manifest "$MANIFEST_PATH" \
-        --base-url "$ARTIFACT_BASE_URL" --name "$1" --output "$2"
+        --base-url "$ARTIFACT_BASE_URL" --name "$1" --output "$2" "${transport_args[@]}"
 }
 
 install_dependencies() {
@@ -232,6 +238,10 @@ install_binary() {
         mv -- "$staging" "$SDLC_DIR/app"
         touch "$SDLC_DIR/.app-ready"
     fi
+    # Alguns tarballs omitem entradas de diretórios; umask 077 cria pais 0700.
+    # Garante leitura/travessia pela conta de serviço sem abrir o diretório base.
+    chgrp -R "$SERVICE_USER" "$SDLC_DIR/app"
+    chmod -R g+rX "$SDLC_DIR/app"
 }
 
 prepare_tls() {
@@ -393,7 +403,9 @@ EOF
         proxy_request_buffering off;
         proxy_buffering off;
 EOF
-            [[ $UPSTREAM != https:* ]] || printf '        proxy_ssl_verify off; # certificado interno do backend, restrito a loopback\n'
+            if [[ $UPSTREAM == https:* ]]; then
+                printf '        proxy_ssl_verify on;\n        proxy_ssl_server_name on;\n        proxy_ssl_name localhost;\n        proxy_ssl_trusted_certificate %s/config/root-ca.crt;\n' "$SDLC_DIR"
+            fi
             printf '    }\n}\n'
         else
             printf 'server {\n    listen %s%s;\n    listen [::]:%s%s;\n' "$PUBLIC_PORT" "$([[ $PROXY_KIND == redis ]] && printf ' ssl')" "$PUBLIC_PORT" "$([[ $PROXY_KIND == redis ]] && printf ' ssl')"
@@ -441,8 +453,10 @@ EOF
 
 wait_http() {
     local url=$1 code deadline=$((SECONDS + 600))
+    local -a tls_args=()
+    [[ $url != https:* ]] || tls_args=(--cacert "$SDLC_DIR/config/root-ca.crt")
     while ((SECONDS < deadline)); do
-        code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 --insecure "$url" || true)
+        code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 "${tls_args[@]}" "$url" || true)
         case "$code" in 200|201|204|301|302|303|401|403) return 0 ;; esac
         sleep 5
     done

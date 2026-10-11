@@ -3,16 +3,19 @@
 import argparse
 import concurrent.futures
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tarfile
 import tempfile
 import urllib.request
+import urllib.parse
 import zipfile
 
 REPO = Path(__file__).resolve().parents[2]
@@ -28,19 +31,39 @@ def sha256(path):
     return digest(path)
 
 
-def request(url):
-    if not url.startswith("https://"):
-        raise ValueError("Somente HTTPS: " + url)
-    response = urllib.request.urlopen(
+def validate_url(url, allow_private_http=False):
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.hostname or parsed.username or parsed.password:
+        raise ValueError("URL inválida ou com credenciais")
+    if parsed.scheme == "https":
+        return
+    if parsed.scheme != "http" or not allow_private_http:
+        raise ValueError("HTTP exige autorização explícita para um CDN privado; prefira HTTPS")
+    networks = [ipaddress.ip_network(value) for value in
+                ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8', '::1/128', 'fc00::/7']]
+    addresses = {ipaddress.ip_address(row[4][0]) for row in socket.getaddrinfo(parsed.hostname, parsed.port or 80, type=socket.SOCK_STREAM)}
+    if not addresses or not all(any(address in network for network in networks) for address in addresses):
+        raise ValueError("HTTP autorizado somente para DNS/IP de rede privada ou loopback")
+
+
+def request(url, allow_private_http=False):
+    validate_url(url, allow_private_http)
+
+    class CheckedRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            validate_url(newurl, allow_private_http)
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    opener = urllib.request.build_opener(CheckedRedirect())
+    response = opener.open(
         urllib.request.Request(url, headers={"User-Agent": "sdlc-infrastructure/1"}), timeout=60
     )
-    if not response.url.startswith("https://"):
-        response.close()
-        raise ValueError("Redirecionamento para protocolo sem TLS")
     return response
 
 
-def download(url, output, expected=None, algorithm="sha256"):
+def download(url, output, expected=None, algorithm="sha256", allow_private_http=False):
+    if allow_private_http and not expected:
+        raise ValueError("CDN HTTP exige checksum esperado fornecido por canal confiável")
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.is_symlink():
@@ -52,7 +75,8 @@ def download(url, output, expected=None, algorithm="sha256"):
         raise ValueError("Arquivo temporário não pode ser symlink")
     for attempt in range(3):
         try:
-            with request(url) as response, temporary.open("wb") as stream:
+            response = request(url, True) if allow_private_http else request(url)
+            with response, temporary.open("wb") as stream:
                 shutil.copyfileobj(response, stream, length=1024 * 1024)
             if expected and digest(temporary, algorithm) != expected:
                 raise ValueError("Checksum incorreto: " + output.name)
@@ -217,7 +241,8 @@ def fetch(args):
     entry = next(e for e in manifest["artifacts"] if e["name"] == args.name)
     if not re.fullmatch(r"[a-zA-Z0-9._-]+", args.name) or not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]):
         raise ValueError("Entrada insegura no manifesto")
-    download(args.base_url.rstrip("/") + "/" + args.name, args.output, entry["sha256"])
+    download(args.base_url.rstrip("/") + "/" + args.name, args.output, entry["sha256"],
+             allow_private_http=args.allow_private_http)
 
 
 def main():
@@ -228,6 +253,10 @@ def main():
     command = sub.add_parser("fetch")
     for key in ["manifest", "base-url", "name", "output"]:
         command.add_argument("--" + key, required=True)
+    command.add_argument("--allow-private-http", action="store_true")
+    command = sub.add_parser("check-url")
+    command.add_argument("--url", required=True)
+    command.add_argument("--allow-private-http", action="store_true")
     command = sub.add_parser("extract")
     command.add_argument("--archive", required=True)
     command.add_argument("--output", required=True)
@@ -238,6 +267,8 @@ def main():
         prepare(args)
     elif args.command == "fetch":
         fetch(args)
+    elif args.command == "check-url":
+        validate_url(args.url, args.allow_private_http)
     else:
         extract(args.archive, args.output, args.strip_root, args.root_prefix)
 

@@ -111,6 +111,8 @@ EOF
             printf 'Login: admin\nSenha inicial real: /var/lib/sdlc/nexus/admin.password (gerada pelo Nexus).\n' > "$SDLC_DIR/credentials.txt"
             install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$DATA_DIR/etc" "$DATA_DIR/tmp" "$DATA_DIR/log"
             printf 'application-host=127.0.0.1\napplication-port=%s\n' "$BACKEND_PORT" > "$DATA_DIR/etc/nexus.properties"
+            chgrp "$SERVICE_USER" "$DATA_DIR/etc/nexus.properties"
+            chmod 0640 "$DATA_DIR/etc/nexus.properties"
             sed -i -E '/^-Dkaraf\.(data|log|home|base)=/d; /^-Djava.io.tmpdir=/d; /^-Djava.util.logging.config.file=/d; /^-XX:LogFile=/d' "$SDLC_DIR/app/bin/nexus.vmoptions"
             cat >> "$SDLC_DIR/app/bin/nexus.vmoptions" <<EOF
 -Dkaraf.data=$DATA_DIR
@@ -184,6 +186,14 @@ plugins.security.nodes_dn: ['CN=sdlc-node']
 plugins.security.restapi.roles_enabled: [all_access, security_rest_api_access]
 EOF
             install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$DATA_DIR/data" "$DATA_DIR/logs"
+            # O launcher muda o diretório para app/; a distribuição permanece somente leitura.
+            sed -i -e "s|^-XX:HeapDumpPath=.*|-XX:HeapDumpPath=$DATA_DIR/data|" \
+                -e "s|logs/|$DATA_DIR/logs/|g" "$SDLC_DIR/config/jvm.options"
+            # O bootstrap criaria o keystore antes de iniciar os logs; config/ é root-owned.
+            if [[ ! -f $SDLC_DIR/config/opensearch.keystore ]]; then
+                OPENSEARCH_PATH_CONF="$SDLC_DIR/config" OPENSEARCH_JAVA_HOME="$SDLC_DIR/app/jdk" \
+                    "$SDLC_DIR/app/bin/opensearch-keystore" create
+            fi
             cat > "$SDLC_DIR/service.env" <<EOF
 OPENSEARCH_PATH_CONF=$SDLC_DIR/config
 OPENSEARCH_JAVA_HOME=$SDLC_DIR/app/jdk

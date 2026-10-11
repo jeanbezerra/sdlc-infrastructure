@@ -25,7 +25,8 @@ Copie `<serviço>/linux/.env.example` para `<serviço>/linux/.env` e edite:
 | `ACCESS_CIDRS` | Redes permitidas no proxy, separadas por vírgula, sem espaços |
 | `SSH_PORT` | Porta real do sshd; padrão 22 |
 | `SSH_CIDRS` | Redes dos administradores SSH; confirme que incluem o seu IP antes da ativação do UFW |
-| `ARTIFACT_BASE_URL` | URL HTTPS do prefixo do CDN |
+| `ARTIFACT_BASE_URL` | URL do prefixo do CDN local ou HTTPS remoto |
+| `ALLOW_HTTP_ARTIFACTS` | `true` autoriza HTTP somente para endereços privados/loopback, com SHA256 confiável; padrão `false` |
 | `MANIFEST_PATH` | Caminho absoluto para o manifesto confiável |
 | `TLS_CERT_PATH` / `TLS_KEY_PATH` | Caminhos absolutos para fullchain PEM e chave não criptografada; vazios geram certificado autoassinado |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` | Banco PostgreSQL dedicado de Keycloak/SonarQube |
@@ -45,7 +46,7 @@ O instalador valida o ambiente, reserva os caminhos e portas, baixa e verifica a
 
 Os backends escutam em loopback. Nginx aplica HTTPS e os CIDRs também no nível da aplicação/proxy, mesmo que o UFW já tenha regras mais amplas. Um firewall já ativo mantém suas políticas; o script não usa `ufw reset` nem remove regras externas. Regras por perfis `SDLC-<serviço>` permitem que instalações compartilhem 80/443 sem apagar a liberação de outro serviço.
 
-A instalação de pacotes evita o auto-start quando não existe `policy-rc.d` externo e impede a criação automática de um PostgreSQL `main`. O cluster deste projeto é independente, com diretório próprio. Políticas de pacote preexistentes são preservadas. Verifique se outras aplicações já escutam nas portas da matriz antes de instalar.
+A instalação de pacotes evita o auto-start quando não existe `policy-rc.d` externo e impede a criação automática de um PostgreSQL `main`. O cluster deste projeto é independente, com diretório próprio. Políticas de pacote preexistentes são preservadas. Quando o pacote Redis é instalado pela primeira vez, sua unit padrão `redis-server.service` é desabilitada, inclusive para o boot; o projeto executa somente `sdlc-redis.service`. Um Redis já instalado antes do bundle é preservado. Verifique se outras aplicações já escutam nas portas da matriz antes de instalar.
 
 ## Acessar e diagnosticar
 

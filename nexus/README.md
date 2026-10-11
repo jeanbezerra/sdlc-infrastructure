@@ -43,7 +43,7 @@ nano nexus/linux/.env
 chmod 600 nexus/linux/.env
 ```
 
-Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL e MANIFEST_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
+Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL, ALLOW_HTTP_ARTIFACTS e MANIFEST_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
 
 ### 3. Instalar e verificar
 
@@ -91,7 +91,7 @@ Pare o serviço e copie todo o diretório de dados, incluindo banco interno, blo
 
 Confira memória, permissões e journal. O launcher oficial usa o runtime do pacote. Opções/caminhos ficam em app/bin/nexus.vmoptions. Se upload receber 413, confira também proxies anteriores ao Nginx.
 
-Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. Não há HA nem homologação completa em VM limpa; consulte [validação](../docs/validation.md).
+Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. O ciclo do instalador foi validado na VM Ubuntu 26.04.1 LTS; consulte o [relatório da homologação](../docs/vm-validation.md). Backup/restore, HA e carga precisam de validação operacional.
 
 ## Desinstalação completa
 

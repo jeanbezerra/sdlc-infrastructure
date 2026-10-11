@@ -1,4 +1,4 @@
-# Artefatos para o CDN S3
+# Artefatos para o CDN local
 
 Os downloads preparados ficam em `cdn/ubuntu26-amd64/`. São binários oficiais dos fornecedores e bundles `.deb` obtidos dos repositórios oficiais Ubuntu 26.04 LTS, acompanhados de `manifest.json` e `SHA256SUMS`.
 

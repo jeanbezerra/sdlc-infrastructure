@@ -18,7 +18,7 @@ O tráfego de entrada passa pelo Nginx instalado na VM. Todos os backends ficam 
 
 **SSH:** `SSH_PORT` (normalmente 22/TCP), permitido de `SSH_CIDRS` antes de ativar o UFW. Confirme seu IP/rede de administração e a porta real. As regras SSH permanecem ao remover serviços, para evitar perder acesso à VM.
 
-**Saída:** HTTPS/443 para o CDN, DNS/53 para o resolvedor, sincronização de hora conforme a VM e as integrações da aplicação. Keycloak e SonarQube precisam alcançar PostgreSQL/5432. Jenkins pode precisar acessar Git/HTTPS ou SSH, repositórios de dependências e APIs de deployment. Prometheus precisa alcançar as portas de exporters autorizados. Se houver firewall de saída corporativo, mapeie esses destinos conforme o seu ambiente; os scripts não abrem destinos indiscriminadamente.
+**Saída:** HTTP/80 para `cdn.trendsoftware.brasil` (`192.168.0.200`) no ambiente local atual; HTTPS/443 se o CDN usar TLS; DNS/53 para o resolvedor e sincronização de hora conforme a VM. A preparação dos artefatos oficiais usa HTTPS/443. Keycloak e SonarQube precisam alcançar PostgreSQL/5432. Jenkins pode precisar acessar Git/HTTPS ou SSH, repositórios de dependências e APIs de deployment. Prometheus precisa alcançar as portas de exporters autorizados. Se houver firewall de saída corporativo, mapeie esses destinos conforme o seu ambiente; os scripts não abrem destinos indiscriminadamente.
 
 PostgreSQL usa proxy TCP que preserva o handshake PostgreSQL e a criptografia nativa. Não se adiciona `ssl` ao listener stream de PostgreSQL. Redis termina TLS no Nginx e usa protocolo Redis somente em loopback; clientes usam `redis-cli --tls ... -p 6380`. Nginx não converte protocolos em HTTP.
 

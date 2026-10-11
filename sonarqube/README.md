@@ -63,7 +63,7 @@ nano sonarqube/linux/.env
 chmod 600 sonarqube/linux/.env
 ```
 
-Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL e MANIFEST_PATH. Configure também DB_HOST, DB_PORT=5432, DB_NAME, DB_USER, DB_PASSWORD_FILE e DB_CA_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
+Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL, ALLOW_HTTP_ARTIFACTS e MANIFEST_PATH. Configure também DB_HOST, DB_PORT=5432, DB_NAME, DB_USER, DB_PASSWORD_FILE e DB_CA_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
 
 ### 4. Instalar e verificar
 
@@ -111,7 +111,7 @@ Faça backup do banco sonarqube e de configuração/plugins. Índices locais sã
 
 Confira /var/lib/sdlc/sonarqube/logs/, RAM, disco e journal. O instalador ajusta vm.max_map_count e limites de arquivos/processos. Falhas JDBC exigem conferir CA, DNS, role e porta 5432.
 
-Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. Não há HA nem homologação completa em VM limpa; consulte [validação](../docs/validation.md).
+Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. O ciclo do instalador foi validado na VM Ubuntu 26.04.1 LTS; consulte o [relatório da homologação](../docs/vm-validation.md). Backup/restore, HA e carga precisam de validação operacional.
 
 ## Desinstalação completa
 

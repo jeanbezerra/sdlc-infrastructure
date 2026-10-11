@@ -65,7 +65,7 @@ nano keycloack/linux/.env
 chmod 600 keycloack/linux/.env
 ```
 
-Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL e MANIFEST_PATH. Configure também DB_HOST, DB_PORT=5432, DB_NAME, DB_USER, DB_PASSWORD_FILE e DB_CA_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
+Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL, ALLOW_HTTP_ARTIFACTS e MANIFEST_PATH. Configure também DB_HOST, DB_PORT=5432, DB_NAME, DB_USER, DB_PASSWORD_FILE e DB_CA_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
 
 ### 4. Instalar e verificar
 
@@ -117,7 +117,7 @@ Faça backup do PostgreSQL externo keycloak e salve configuração, temas e prov
 
 Falhas de login/origin sugerem DOMAIN, hostname ou redirect URI incorretos. Falhas JDBC exigem conferir CA, DNS, usuário e acesso à porta 5432. Management/health/metrics ficam em loopback/19084.
 
-Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. Não há HA nem homologação completa em VM limpa; consulte [validação](../docs/validation.md).
+Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. O ciclo do instalador foi validado na VM Ubuntu 26.04.1 LTS; consulte o [relatório da homologação](../docs/vm-validation.md). Backup/restore, HA e carga precisam de validação operacional.
 
 ## Desinstalação completa
 

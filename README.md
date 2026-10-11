@@ -1,6 +1,6 @@
 # Infraestrutura para o SDLC
 
-Instalação nativa em **Ubuntu Server 26.04 LTS, amd64**, com binários oficiais, pacotes APT oficiais do Ubuntu, serviços systemd, Nginx, TLS e UFW. Os artefatos são baixados previamente para uma pasta que pode ser publicada em S3/CloudFront. **Não utiliza Docker.**
+Instalação nativa em **Ubuntu Server 26.04 LTS, amd64**, com binários oficiais, pacotes APT oficiais do Ubuntu, serviços systemd, Nginx, TLS e UFW. Os artefatos são baixados previamente para uma pasta servida pelo Apache HTTPD no CDN local. **Não utiliza Docker.**
 
 ## Sumário dos serviços
 
@@ -44,7 +44,7 @@ O desenho apresenta integrações possíveis. Os instaladores não configuram au
 ## Por onde começar
 
 1. Prepare os downloads em Ubuntu 26.04, seguindo [CDN: preparação, verificação e publicação](docs/cdn.md). A saída fica em `artifacts/cdn/ubuntu26-amd64/`.
-2. Publique a pasta no seu S3/CloudFront e entregue `manifest.json` às VMs por um canal confiável. O manifesto contém os SHA256 esperados; não é baixado silenciosamente junto com o binário.
+2. Publique a pasta no Apache HTTPD do CDN local e entregue `manifest.json` às VMs por um canal confiável. O manifesto contém os SHA256 esperados; não é baixado silenciosamente junto com o binário.
 3. Prepare DNS, IP fixo, certificado e redes de acesso. Consulte a [matriz de portas](docs/ports.md) e o [guia Linux](docs/linux.md).
 4. Instale PostgreSQL antes de Keycloak/SonarQube. Crie bancos e usuários separados conforme os exemplos dos respectivos guias.
 5. Instale cada serviço pelo seu README. Prefira uma VM por serviço; portas locais distintas também permitem compartilhar uma VM, desde que haja capacidade.
@@ -61,6 +61,7 @@ sudo bash grafana/linux/install.sh --config "$(pwd)/grafana/linux/.env"
 ## Contrato dos instaladores
 
 - Suporte atual: Ubuntu Server **26.04 LTS amd64 com systemd**. Outras LTS e ARM não foram habilitadas.
+- CDN atual: Apache HTTPD em `192.168.0.200`, DNS `cdn.trendsoftware.brasil`. HTTP privado exige `ALLOW_HTTP_ARTIFACTS=true` e manifesto entregue por SSH/SFTP; os downloads são verificados por SHA256.
 - Aplicações HTTP: cliente → Nginx HTTPS/443 → serviço em `127.0.0.1`. Porta 80 somente redireciona para HTTPS.
 - PostgreSQL: Nginx TCP/5432 com TLS nativo do PostgreSQL. Redis: Nginx TLS/6380. Ambos exigem CIDRs restritos.
 - UFW libera SSH antes de ser ativado e cria regras específicas por serviço; Nginx também aplica a lista de redes.
@@ -79,14 +80,14 @@ sudo bash grafana/linux/install.sh --config "$(pwd)/grafana/linux/.env"
 scripts/linux/               rotinas comuns, configurações e preparação do CDN
 artifacts/cdn/               arquivos grandes para publicar, fora do Git
 docs/                        orientações comuns e matriz de portas
-tests/                       validação estática e testes nativos isolados
+tests/                       validação estática, testes nativos e verificador da VM
 ```
 
 Uma implementação futura para Windows deve ser adicionada em `<serviço>/windows/`, mantendo sua lógica separada dos instaladores Linux. Não há instaladores Windows nesta entrega.
 
 ## Validação
 
-Veja [o que foi validado e as limitações](docs/validation.md). Para executar as verificações locais em Ubuntu:
+Os nove instaladores passaram por instalação, reinstalação, reboot e remoção completa na VM dedicada. Veja o [relatório da VM](docs/vm-validation.md) e [o que foi validado e as limitações](docs/validation.md). Para executar as verificações locais em Ubuntu:
 
 ```bash
 bash tests/validate.sh

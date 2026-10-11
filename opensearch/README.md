@@ -44,7 +44,7 @@ nano opensearch/linux/.env
 chmod 600 opensearch/linux/.env
 ```
 
-Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL e MANIFEST_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
+Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL, ALLOW_HTTP_ARTIFACTS e MANIFEST_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
 
 ### 3. Instalar e verificar
 
@@ -96,9 +96,9 @@ Configure repositório externo de snapshots e use a API oficial, com testes de r
 
 ## Diagnóstico
 
-Confira vm.max_map_count, RAM, permissões e journal. API/19200 e transporte/19300 são locais. O proxy usa HTTPS com certificado interno, sem validar o backend nesse trecho loopback; clientes validam o certificado do proxy normalmente.
+O instalador inicializa o keystore antes de iniciar o servidor e grava logs da JVM e da aplicação em `/var/lib/sdlc/opensearch/logs/`. Confira vm.max_map_count, RAM, permissões e journal. API/19200 e transporte/19300 são locais. O proxy usa HTTPS e valida o certificado do backend pela CA interna em `/opt/sdlc/opensearch/config/root-ca.crt`, com nome TLS `localhost`. Os clientes validam separadamente o certificado HTTPS do proxy.
 
-Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. Não há HA nem homologação completa em VM limpa; consulte [validação](../docs/validation.md).
+Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. O ciclo do instalador foi validado na VM Ubuntu 26.04.1 LTS; consulte o [relatório da homologação](../docs/vm-validation.md). Backup/restore, HA e carga precisam de validação operacional.
 
 ## Desinstalação completa
 

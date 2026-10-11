@@ -42,7 +42,7 @@ nano redis/linux/.env
 chmod 600 redis/linux/.env
 ```
 
-Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL e MANIFEST_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
+Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL, ALLOW_HTTP_ARTIFACTS e MANIFEST_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
 
 ### 3. Instalar e verificar
 
@@ -77,6 +77,8 @@ unset REDISCLI_AUTH
 
 Resultado esperado: `PONG`. Confie no certificado público do proxy; não distribua sua chave privada.
 
+O instalador desabilita a unit padrão `redis-server.service` quando instala esse pacote pela primeira vez, para evitar um segundo servidor Redis no boot. Instalações preexistentes são preservadas.
+
 ## Arquivos e operação
 
 | Recurso | Caminho |
@@ -102,7 +104,7 @@ Pare o serviço e copie os dados, incluindo diretório AOF multipart, seu manife
 
 Clientes usam TLS/6380, com CA e usuário sdlc. NOAUTH indica credencial/usuário; erro TLS indica CA/DNS. Não libere 6379/16379 publicamente.
 
-Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. Não há HA nem homologação completa em VM limpa; consulte [validação](../docs/validation.md).
+Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o mesmo .env. O ciclo do instalador foi validado na VM Ubuntu 26.04.1 LTS; consulte o [relatório da homologação](../docs/vm-validation.md). Backup/restore, HA e carga precisam de validação operacional.
 
 ## Desinstalação completa
 

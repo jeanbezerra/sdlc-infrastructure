@@ -1,10 +1,13 @@
 import importlib.util
 import io
+import hashlib
 from pathlib import Path
 import tarfile
 import tempfile
 import unittest
 import zipfile
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import threading
 
 spec = importlib.util.spec_from_file_location('artifacts', Path(__file__).resolve().parents[1] / 'scripts/linux/artifacts.py')
 artifacts = importlib.util.module_from_spec(spec)
@@ -12,6 +15,50 @@ spec.loader.exec_module(artifacts)
 
 
 class ArtifactSecurityTests(unittest.TestCase):
+    def test_private_http_requires_opt_in(self):
+        with self.assertRaises(ValueError):
+            artifacts.validate_url('http://192.168.0.200/cdn')
+        artifacts.validate_url('http://192.168.0.200/cdn', True)
+        with self.assertRaises(ValueError):
+            artifacts.validate_url('http://8.8.8.8/cdn', True)
+
+    def test_private_http_requires_trusted_hash(self):
+        with tempfile.TemporaryDirectory() as work:
+            with self.assertRaises(ValueError):
+                artifacts.download('http://127.0.0.1/file', Path(work) / 'file', allow_private_http=True)
+
+    def test_private_http_download_and_public_redirect(self):
+        payload = b'verified-local-cdn'
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_GET(self):
+                if self.path == '/redirect':
+                    self.send_response(302)
+                    self.send_header('Location', 'http://8.8.8.8/file')
+                    self.end_headers()
+                else:
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(payload)
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever)
+        thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as work:
+                output = Path(work) / 'file'
+                url = 'http://127.0.0.1:' + str(server.server_port)
+                checksum = hashlib.sha256(payload).hexdigest()
+                artifacts.download(url + '/file', output, checksum, allow_private_http=True)
+                self.assertEqual(output.read_bytes(), payload)
+                with self.assertRaises(ValueError):
+                    artifacts.download(url + '/redirect', Path(work) / 'redirect', checksum, allow_private_http=True)
+        finally:
+            server.shutdown()
+            thread.join()
+            server.server_close()
+
     def test_reject_path_escape(self):
         for path in ['../escape', '/etc/passwd', 'root/../../escape', 'root\\escape']:
             with self.assertRaises(ValueError):

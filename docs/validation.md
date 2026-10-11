@@ -7,7 +7,7 @@ bash tests/validate.sh
 bash tests/validate.sh --native
 ```
 
-O primeiro comando verifica sintaxe Bash, ShellCheck, extração segura de arquivos, checksums, parsing declarativo de configuração, ownership/symlinks, wrappers pendentes, links Markdown e correspondência dos arquivos baixados ao manifesto. Precisa de Python 3.12+ e ShellCheck.
+O primeiro comando verifica sintaxe Bash, ShellCheck, extração segura de arquivos, checksums, HTTP privado com opt-in e validação de redirecionamentos, parsing declarativo de configuração, ownership/symlinks, wrappers pendentes, links Markdown e correspondência dos arquivos baixados ao manifesto. Precisa de Python 3.12+ e ShellCheck.
 
 `--native` usa os pacotes/binários baixados em diretórios temporários, sem root. Não instala APT no host, não cria contas/units reais e não muda o firewall. Inicializa um cluster PostgreSQL separado e processos nativos, validando TLS via Nginx, SCRAM, grants de aplicação/migrations, ACL Redis e APIs dos servidores. Requer espaço temporário para extrair as distribuições e memória para a aplicação de maior consumo. Os logs temporários são informados ao final.
 
@@ -17,7 +17,7 @@ Executado em Ubuntu 26.04 LTS via WSL, em **11/10/2026**, com os arquivos presen
 
 | Verificação | Resultado |
 | --- | --- |
-| Sintaxe Bash, ShellCheck e seis testes de artefatos | Passou |
+| Sintaxe Bash, ShellCheck e nove testes de artefatos | Passou |
 | Configuração declarativa, ownership, symlinks e remoção sem `--yes` | Passou |
 | Estrutura, links Markdown e SHA256 dos 11 artefatos | Passou |
 | Nove servidores: inicialização e APIs/health reais | Passou |
@@ -31,9 +31,15 @@ Executado em Ubuntu 26.04 LTS via WSL, em **11/10/2026**, com os arquivos presen
 
 O Keycloak foi iniciado com `cache=ispn`, `jdbc-ping` e mTLS do transporte; os listeners 7800/57800 foram conferidos em loopback. Os processos dos testes foram encerrados ao final. Nenhum serviço do projeto foi instalado no host durante essas verificações.
 
+## Homologação na VM dedicada
+
+Em 11/10/2026, o ciclo dos nove instaladores também passou na VM inicialmente limpa `192.168.0.250`, Ubuntu Server 26.04.1 LTS: instalação APT real, reexecução, `--keep-data`, reinstalação, boot systemd, reconexão SSH com UFW ativo e remoção completa. Os registros PostgreSQL/Redis foram preservados e lidos sem recriação após o último reboot. Veja o [relatório da VM, correções e estado final](vm-validation.md).
+
+O verificador reproduzível é `tests/vm-verify.py`, executado como root na VM de homologação após instalar. Use `--expect-existing` nas verificações após reinstalação/reboot. Ele cria sentinelas e objetos de teste PostgreSQL/Redis na primeira execução.
+
 ## Limites
 
-Ainda é necessária homologação em **VM Ubuntu Server 26.04 LTS limpa** para exercitar a instalação de pacotes com seus scripts de manutenção, boot systemd, firewall/SSH real, renovação TLS e remoção completa/preservação de dados. Testes sem root não demonstram esses efeitos no sistema.
+Renovação TLS, certificados da CA definitiva, restrições de redes externas à LAN e cenários de infraestrutura diferentes ainda exigem validação no ambiente de operação.
 
 Esta entrega não é uma certificação de produção. PostgreSQL utiliza versão 18 do repositório Ubuntu e cluster de uma instância, TLS nativo e SCRAM. Backup/restore completo, PITR, carga concorrente, recuperação após falha e HA precisam de testes no ambiente de operação. O script de aplicação de SQL administrativo atua apenas no cluster explicitamente criado pelo instalador; exemplos de bancos externos exigem conferência pelo administrador.
 
