@@ -1,0 +1,9 @@
+\getenv service_password SDLC_SERVICE_DB_PASSWORD
+CREATE ROLE sonarqube LOGIN PASSWORD :'service_password'
+    NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+CREATE DATABASE sonarqube OWNER sonarqube;
+\connect sonarqube
+REVOKE ALL ON DATABASE sonarqube FROM PUBLIC;
+GRANT CONNECT ON DATABASE sonarqube TO sonarqube;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+ALTER SCHEMA public OWNER TO sonarqube;

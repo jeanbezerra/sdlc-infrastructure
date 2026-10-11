@@ -1,0 +1,17 @@
+{
+  "binaries": [
+    {"name":"jenkins-2.580.1.war","version":"2.580.1 LTS","url":"https://get.jenkins.io/war-stable/2.580.1/jenkins.war","checksum_url":"https://get.jenkins.io/war-stable/2.580.1/jenkins.war.sha256"},
+    {"name":"grafana-13.2.3.linux-amd64.tar.gz","version":"13.2.3","url":"https://dl.grafana.com/oss/release/grafana-13.2.3.linux-amd64.tar.gz","checksum_url":"https://dl.grafana.com/oss/release/grafana-13.2.3.linux-amd64.tar.gz.sha256"},
+    {"name":"prometheus-3.15.0.linux-amd64.tar.gz","version":"3.15.0","url":"https://github.com/prometheus/prometheus/releases/download/v3.15.0/prometheus-3.15.0.linux-amd64.tar.gz","github_release":"https://api.github.com/repos/prometheus/prometheus/releases/tags/v3.15.0"},
+    {"name":"keycloak-26.8.0.tar.gz","version":"26.8.0","url":"https://github.com/keycloak/keycloak/releases/download/26.8.0/keycloak-26.8.0.tar.gz","github_release":"https://api.github.com/repos/keycloak/keycloak/releases/tags/26.8.0"},
+    {"name":"nexus-3.96.4-01-linux-x86_64.tar.gz","version":"3.96.4-01","url":"https://download.sonatype.com/nexus/3/nexus-3.96.4-01-linux-x86_64.tar.gz","checksum_url":"https://download.sonatype.com/nexus/3/nexus-3.96.4-01-linux-x86_64.tar.gz.sha256"},
+    {"name":"sonarqube-26.9.0.129388.zip","version":"26.9.0.129388 Community Build","url":"https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-26.9.0.129388.zip","signature_url":"https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-26.9.0.129388.zip.asc"},
+    {"name":"opensearch-3.9.0-linux-x64.tar.gz","version":"3.9.0","url":"https://artifacts.opensearch.org/releases/bundle/opensearch/3.9.0/opensearch-3.9.0-linux-x64.tar.gz","checksum_url":"https://artifacts.opensearch.org/releases/bundle/opensearch/3.9.0/opensearch-3.9.0-linux-x64.tar.gz.sha512","checksum_algorithm":"sha512"}
+  ],
+  "ubuntu_packages": {
+    "base": ["nginx", "libnginx-mod-stream", "ufw", "openssl", "apache2-utils", "curl", "ca-certificates", "unzip", "python3", "python3-yaml"],
+    "java21": ["openjdk-21-jdk-headless"],
+    "postgresql18": ["postgresql-18", "postgresql-client-18"],
+    "redis": ["redis-server", "redis-tools"]
+  }
+}

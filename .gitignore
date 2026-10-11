@@ -1,0 +1,9 @@
+**/linux/.env
+**/.credentials
+**/runtime.env
+*.key
+*.pem
+__pycache__/
+.validation/
+artifacts/cdn/**
+!artifacts/cdn/.gitkeep
