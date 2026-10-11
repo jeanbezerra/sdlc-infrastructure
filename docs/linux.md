@@ -38,6 +38,8 @@ Para HTTP, `0.0.0.0/0,::/0` permite qualquer cliente e só deve ser usado delibe
 
 ## Instalar
 
+Para [Technitium DNS](../technitium/README.md), consultas DNS chegam diretamente ao IP privado em 53/TCP e UDP, com redes próprias em `DNS_CIDRS`. O painel usa o mesmo proxy HTTPS das demais aplicações. Esse instalador preserva o resolvedor e os arquivos de rede do Ubuntu; consulte seu README para configuração inicial e distribuição do DNS aos clientes.
+
 ```bash
 sudo bash SERVICO/linux/install.sh --config "$(pwd)/SERVICO/linux/.env"
 ```

@@ -47,6 +47,18 @@ ln -s "$work/foreign.conf" "$work/link.conf"
 if (owned_file "$work/link.conf") >/dev/null 2>&1; then exit 1; fi
 SERVICE='../../tmp'
 if (check_paths) >/dev/null 2>&1; then exit 1; fi
+(
+    # As extensões de DNS continuam declarativas e só existem no wrapper Technitium.
+    SERVICE=technitium; PROXY_KIND=http; ACTION=install
+    # shellcheck source=technitium/linux/service.sh
+    source "$REPO_DIR/technitium/linux/service.sh"
+    cp "$work/good.env" "$work/dns.env"
+    printf 'DNS_LISTEN_IPV4=192.168.0.250\nDNS_CIDRS=192.168.0.0/24\nDNS_FORWARDERS=1.1.1.1\nDNS_RECORDS_PATH=/tmp/records.json\n' >> "$work/dns.env"
+    read_config "$work/dns.env"
+    [[ $DNS_LISTEN_IPV4 == 192.168.0.250 ]]
+    sed 's|DNS_CIDRS=.*|DNS_CIDRS=0.0.0.0/0|' "$work/dns.env" > "$work/bad.env"
+    expect_rejection 'recursão DNS pública'
+)
 SERVICE=grafana; ACTION=uninstall; YES=false; KEEP_DATA=false
 mkdir "$work/state"
 printf 'sentinela\n' > "$work/state/keep"

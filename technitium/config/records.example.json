@@ -1,0 +1,21 @@
+{
+  "zone": "trendsoftware.brasil",
+  "records": [
+    {"name": "cdn", "type": "A", "value": "192.168.0.200", "ttl": 300},
+    {"name": "jenkins", "type": "A", "value": "192.168.0.161", "ttl": 300},
+    {"name": "postgresql.server1", "type": "A", "value": "192.168.0.201", "ttl": 300},
+    {"name": "sonarqube", "type": "A", "value": "192.168.0.202", "ttl": 300},
+    {"name": "harbor", "type": "A", "value": "192.168.0.207", "ttl": 300},
+    {"name": "rancher", "type": "A", "value": "192.168.0.208", "ttl": 300},
+    {"name": "kubernetes.cluster1", "type": "A", "value": "192.168.0.210", "ttl": 300},
+    {"name": "kubernetes.cluster2", "type": "A", "value": "192.168.0.211", "ttl": 300},
+    {"name": "kubernetes.cluster3", "type": "A", "value": "192.168.0.212", "ttl": 300},
+    {"name": "grafana", "type": "A", "value": "192.168.0.203", "ttl": 300},
+    {"name": "prometheus", "type": "A", "value": "192.168.0.204", "ttl": 300},
+    {"name": "redis", "type": "A", "value": "192.168.0.205", "ttl": 300},
+    {"name": "keycloak", "type": "A", "value": "192.168.0.206", "ttl": 300},
+    {"name": "argocd", "type": "A", "value": "192.168.0.209", "ttl": 300},
+    {"name": "nexus", "type": "A", "value": "192.168.0.213", "ttl": 300},
+    {"name": "opensearch", "type": "A", "value": "192.168.0.214", "ttl": 300}
+  ]
+}

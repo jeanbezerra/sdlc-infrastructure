@@ -26,6 +26,8 @@ O script baixa os arquivos listados em [catalog.json](../scripts/linux/catalog.j
 | `nexus-3.96.4-01-linux-x86_64.tar.gz` | Nexus com runtime do fornecedor |
 | `sonarqube-26.9.0.129388.zip` e `.asc` | SonarQube Community Build e assinatura |
 | `opensearch-3.9.0-linux-x64.tar.gz` | OpenSearch com JDK e plugins |
+| `technitium-15.6.1.tar.gz` | Technitium DNS Server portátil oficial |
+| `ubuntu26-technitium.tar.gz` | ASP.NET Core 10, dnsutils e dependências oficiais Ubuntu |
 | `ubuntu26-base.tar.gz` | Nginx, módulo stream, UFW, TLS, utilitários e dependências |
 | `ubuntu26-java21.tar.gz` | OpenJDK 21, fontconfig, fontes DejaVu e HarfBuzz oficiais Ubuntu |
 | `ubuntu26-postgresql18.tar.gz` | PostgreSQL 18 e cliente oficial Ubuntu |
@@ -117,6 +119,10 @@ Salve em `/etc/apache2/sites-available/sdlc-cdn.conf`, execute `sudo a2ensite sd
 O mesmo diretório pode ser publicado em S3/CloudFront futuramente; altere `ARTIFACT_BASE_URL` para HTTPS e desabilite a opção HTTP. Os instaladores não usam credenciais AWS nem exigem uma plataforma específica de CDN.
 
 ## 4. Dependências e atualização
+
+Para acrescentar o DNS ao conjunto existente sem recriar os bundles anteriores, execute `python3 scripts/linux/artifacts.py prepare --only technitium-15.6.1.tar.gz ubuntu26-technitium.tar.gz`. As entradas anteriores do manifesto são preservadas após verificar os arquivos locais. Publique os dois novos artefatos e o manifesto/checksums atualizados juntos; preserve um backup dos metadados anteriores. Veja o [guia Technitium](../technitium/README.md).
+
+Em 11/10/2026, os dois arquivos DNS foram publicados no Apache local, totalizando 13 artefatos no manifesto. Os metadados anteriores foram preservados em `/home/trendsoftware/sdlc-cdn-backup-technitium-20261011-eIE0Lg/`. O novo bundle inclui ASP.NET Core/runtime `10.0.12-0ubuntu1~26.04.1`; os 13 SHA256 publicados passaram na conferência.
 
 Na VM de destino, o bootstrap mínimo é `python3`, `curl` e `ca-certificates`, instalados pelo APT oficial. Depois, os bundles do CDN fornecem as dependências e são instalados com `apt-get --no-download`; não há fallback que baixe silenciosamente outro binário do fornecedor.
 

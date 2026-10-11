@@ -51,13 +51,20 @@ read_config() {
     DOMAIN=''; ACCESS_CIDRS=''; SSH_PORT=22; SSH_CIDRS='0.0.0.0/0,::/0'
     TLS_CERT_PATH=''; TLS_KEY_PATH=''; ARTIFACT_BASE_URL=''; MANIFEST_PATH=''; ALLOW_HTTP_ARTIFACTS=false
     DB_HOST=''; DB_PORT=5432; DB_NAME=''; DB_USER=''; DB_PASSWORD_FILE=''; DB_CA_PATH=''
+    if declare -F service_config_defaults >/dev/null; then service_config_defaults; fi
     declare -A seen=()
     while IFS= read -r line || [[ -n $line ]]; do
         line=${line%$'\r'}
         [[ -z $line || $line == \#* ]] && continue
-        [[ $line =~ ^([A-Z_]+)=(.*)$ ]] || die 'Use KEY=value, sem export, aspas ou espaços ao redor de =.'
+        [[ $line =~ ^([A-Z][A-Z0-9_]+)=(.*)$ ]] || die 'Use KEY=value, sem export, aspas ou espaços ao redor de =.'
         key=${BASH_REMATCH[1]}; value=${BASH_REMATCH[2]}
-        case "$key" in DOMAIN|ACCESS_CIDRS|SSH_PORT|SSH_CIDRS|TLS_CERT_PATH|TLS_KEY_PATH|ARTIFACT_BASE_URL|MANIFEST_PATH|ALLOW_HTTP_ARTIFACTS|DB_HOST|DB_PORT|DB_NAME|DB_USER|DB_PASSWORD_FILE|DB_CA_PATH) ;; *) die "Chave não reconhecida: $key" ;; esac
+        case "$key" in
+            DOMAIN|ACCESS_CIDRS|SSH_PORT|SSH_CIDRS|TLS_CERT_PATH|TLS_KEY_PATH|ARTIFACT_BASE_URL|MANIFEST_PATH|ALLOW_HTTP_ARTIFACTS|DB_HOST|DB_PORT|DB_NAME|DB_USER|DB_PASSWORD_FILE|DB_CA_PATH) ;;
+            *)
+                if ! declare -F service_config_key >/dev/null; then die "Chave não reconhecida: $key"; fi
+                service_config_key "$key" || die "Chave não reconhecida: $key"
+                ;;
+        esac
         [[ ! ${seen[$key]+exists} ]] || die "Chave duplicada: $key"
         seen[$key]=1
         [[ $value != *[\"\'\`\$\;\\]* && $value != *$'\t'* && $value != *' '* ]] || die "Valor inválido em $key. Use valores literais sem aspas/espaços."
@@ -112,6 +119,7 @@ PY
         fi
     fi
     export DOMAIN ACCESS_CIDRS SSH_PORT SSH_CIDRS TLS_CERT_PATH TLS_KEY_PATH ARTIFACT_BASE_URL MANIFEST_PATH
+    if declare -F service_validate_config >/dev/null; then service_validate_config; fi
 }
 
 check_paths() {
@@ -442,6 +450,7 @@ EOF
     for cidr in "${cidrs[@]}"; do
         ufw allow from "$cidr" to any app "SDLC-$SERVICE" comment "sdlc-$SERVICE"
     done
+    if declare -F service_firewall >/dev/null; then service_firewall; fi
     # Não redefinimos as políticas de um firewall já ativo.
     if ! LC_ALL=C ufw status | grep -q '^Status: active'; then
         ufw default deny incoming
@@ -491,6 +500,7 @@ install_service() {
 
 remove_firewall() {
     local profile="/etc/ufw/applications.d/sdlc-$SERVICE" cidr
+    if declare -F service_remove_firewall >/dev/null; then service_remove_firewall; fi
     [[ -f $profile ]] || return 0
     owned_file "$profile"
     local -a cidrs

@@ -4,7 +4,7 @@ import json
 import re
 
 root = Path(__file__).resolve().parents[1]
-services = ['jenkins', 'grafana', 'prometheus', 'keycloack', 'nexus', 'sonarqube', 'opensearch', 'postgresql', 'redis']
+services = ['jenkins', 'grafana', 'prometheus', 'keycloack', 'nexus', 'sonarqube', 'opensearch', 'postgresql', 'redis', 'technitium']
 for service in services:
     for file in ['README.md', 'linux/install.sh', 'linux/uninstall.sh', 'linux/service.sh', 'linux/.env.example']:
         assert (root / service / file).is_file(), (service, file)

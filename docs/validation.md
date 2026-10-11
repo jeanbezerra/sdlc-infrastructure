@@ -17,9 +17,9 @@ Executado em Ubuntu 26.04 LTS via WSL, em **11/10/2026**, com os arquivos presen
 
 | Verificação | Resultado |
 | --- | --- |
-| Sintaxe Bash, ShellCheck e nove testes de artefatos | Passou |
+| Sintaxe Bash, ShellCheck e 16 testes Python (artefatos e configuração DNS) | Passou |
 | Configuração declarativa, ownership, symlinks e remoção sem `--yes` | Passou |
-| Estrutura, links Markdown e SHA256 dos 11 artefatos | Passou |
+| Estrutura, links Markdown e SHA256 dos 13 artefatos | Passou |
 | Nove servidores: inicialização e APIs/health reais | Passou |
 | Nginx oficial Ubuntu: TLS PostgreSQL/Redis e sintaxe dos nove proxies juntos | Passou |
 | PostgreSQL: SCRAM, SQL repetível, login de migrations, DML e bloqueio de DDL/sem TLS/senha incorreta | Passou |
@@ -38,6 +38,8 @@ Em 11/10/2026, o ciclo dos nove instaladores também passou na VM inicialmente l
 O verificador reproduzível é `tests/vm-verify.py`, executado como root na VM de homologação após instalar. Use `--expect-existing` nas verificações após reinstalação/reboot. Ele cria sentinelas e objetos de teste PostgreSQL/Redis na primeira execução.
 
 ## Limites
+
+O [Technitium também passou em homologação na VM](../technitium/validation.md), incluindo DNS TCP/UDP, painel TLS, API, registros A/AAAA/CNAME/TXT, persistência após reboot e remoção completa. Seu teste explícito é `tests/technitium-vm.py`; `--seed` cria dados e modifica o cache somente em uma VM de homologação. O comando `tests/validate.sh --native` continua cobrindo os nove serviços originais.
 
 Renovação TLS, certificados da CA definitiva, restrições de redes externas à LAN e cenários de infraestrutura diferentes ainda exigem validação no ambiente de operação.
 

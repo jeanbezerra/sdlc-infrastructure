@@ -6,12 +6,14 @@
     {"name":"keycloak-26.8.0.tar.gz","version":"26.8.0","url":"https://github.com/keycloak/keycloak/releases/download/26.8.0/keycloak-26.8.0.tar.gz","github_release":"https://api.github.com/repos/keycloak/keycloak/releases/tags/26.8.0"},
     {"name":"nexus-3.96.4-01-linux-x86_64.tar.gz","version":"3.96.4-01","url":"https://download.sonatype.com/nexus/3/nexus-3.96.4-01-linux-x86_64.tar.gz","checksum_url":"https://download.sonatype.com/nexus/3/nexus-3.96.4-01-linux-x86_64.tar.gz.sha256"},
     {"name":"sonarqube-26.9.0.129388.zip","version":"26.9.0.129388 Community Build","url":"https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-26.9.0.129388.zip","signature_url":"https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-26.9.0.129388.zip.asc"},
-    {"name":"opensearch-3.9.0-linux-x64.tar.gz","version":"3.9.0","url":"https://artifacts.opensearch.org/releases/bundle/opensearch/3.9.0/opensearch-3.9.0-linux-x64.tar.gz","checksum_url":"https://artifacts.opensearch.org/releases/bundle/opensearch/3.9.0/opensearch-3.9.0-linux-x64.tar.gz.sha512","checksum_algorithm":"sha512"}
+    {"name":"opensearch-3.9.0-linux-x64.tar.gz","version":"3.9.0","url":"https://artifacts.opensearch.org/releases/bundle/opensearch/3.9.0/opensearch-3.9.0-linux-x64.tar.gz","checksum_url":"https://artifacts.opensearch.org/releases/bundle/opensearch/3.9.0/opensearch-3.9.0-linux-x64.tar.gz.sha512","checksum_algorithm":"sha512"},
+    {"name":"technitium-15.6.1.tar.gz","version":"15.6.1","url":"https://download.technitium.com/dns/archive/15.6.1/DnsServerPortable.tar.gz","checksum_url":"https://download.technitium.com/dns/archive/15.6.1/DnsServerPortable.tar.gz.sha256"}
   ],
   "ubuntu_packages": {
     "base": ["nginx", "libnginx-mod-stream", "ufw", "openssl", "apache2-utils", "curl", "ca-certificates", "unzip", "python3", "python3-yaml"],
     "java21": ["openjdk-21-jdk-headless", "fontconfig", "fonts-dejavu-core", "libharfbuzz0b"],
     "postgresql18": ["postgresql-18", "postgresql-client-18"],
-    "redis": ["redis-server", "redis-tools"]
+    "redis": ["redis-server", "redis-tools"],
+    "technitium": ["aspnetcore-runtime-10.0", "dnsutils"]
   }
 }

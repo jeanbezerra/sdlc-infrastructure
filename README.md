@@ -6,6 +6,7 @@ Instalação nativa em **Ubuntu Server 26.04 LTS, amd64**, com binários oficiai
 
 | Serviço | Responsabilidade no fluxo de SDLC | Situação |
 | --- | --- | --- |
+| [Technitium DNS](technitium/README.md) | Nomes estáveis para ferramentas, CDN e aplicações em todos os ambientes | Instalador, configuração e desinstalador nativos |
 | [Jenkins](jenkins/README.md) | Integração contínua: builds, testes, análise e publicação | Instalador e desinstalador nativos |
 | [SonarQube](sonarqube/README.md) | Qualidade, vulnerabilidades e quality gates do código | Instalador e desinstalador nativos |
 | [Nexus](nexus/README.md) | Repositório de dependências e artefatos, como Maven/npm | Instalador e desinstalador nativos |
@@ -37,6 +38,9 @@ flowchart LR
     PostgreSQL --> Keycloak
     PostgreSQL --> SonarQube
     Redis[Redis: cache e sessões] --> Entrega
+    DNS[Technitium: nomes da infraestrutura] -. resolução .-> Jenkins
+    DNS -. resolução .-> Artefatos
+    DNS -. resolução .-> Entrega
 ```
 
 O desenho apresenta integrações possíveis. Os instaladores não configuram automaticamente pipelines, realms, OIDC, datasources, shippers de logs ou deployments. Essas ligações exigem credenciais e decisões próprias do ambiente.
@@ -45,7 +49,7 @@ O desenho apresenta integrações possíveis. Os instaladores não configuram au
 
 1. Prepare os downloads em Ubuntu 26.04, seguindo [CDN: preparação, verificação e publicação](docs/cdn.md). A saída fica em `artifacts/cdn/ubuntu26-amd64/`.
 2. Publique a pasta no Apache HTTPD do CDN local e entregue `manifest.json` às VMs por um canal confiável. O manifesto contém os SHA256 esperados; não é baixado silenciosamente junto com o binário.
-3. Prepare DNS, IP fixo, certificado e redes de acesso. Consulte a [matriz de portas](docs/ports.md) e o [guia Linux](docs/linux.md).
+3. Prepare DNS, IP fixo, certificado e redes de acesso. Consulte a [matriz de portas](docs/ports.md) e o [guia Linux](docs/linux.md). O [Technitium](technitium/README.md) fornece o DNS interno: instale e teste antes de mudar o DNS distribuído pelo DHCP. Para baixar seus próprios artefatos, use o DNS existente ou uma entrada hosts para o CDN.
 4. Instale PostgreSQL antes de Keycloak/SonarQube. Crie bancos e usuários separados conforme os exemplos dos respectivos guias.
 5. Instale cada serviço pelo seu README. Prefira uma VM por serviço; portas locais distintas também permitem compartilhar uma VM, desde que haja capacidade.
 6. Configure as integrações do seu fluxo e valide backup/restore antes de usar dados importantes.
@@ -64,6 +68,7 @@ sudo bash grafana/linux/install.sh --config "$(pwd)/grafana/linux/.env"
 - CDN atual: Apache HTTPD em `192.168.0.200`, DNS `cdn.trendsoftware.brasil`. HTTP privado exige `ALLOW_HTTP_ARTIFACTS=true` e manifesto entregue por SSH/SFTP; os downloads são verificados por SHA256.
 - Aplicações HTTP: cliente → Nginx HTTPS/443 → serviço em `127.0.0.1`. Porta 80 somente redireciona para HTTPS.
 - PostgreSQL: Nginx TCP/5432 com TLS nativo do PostgreSQL. Redis: Nginx TLS/6380. Ambos exigem CIDRs restritos.
+- Technitium: consultas diretas em 53/TCP e UDP no IP privado da VM, restritas a `DNS_CIDRS`; somente o painel passa pelo Nginx. O resolvedor do Ubuntu é preservado.
 - UFW libera SSH antes de ser ativado e cria regras específicas por serviço; Nginx também aplica a lista de redes.
 - Cada serviço tem usuário sem login, unit `sdlc-<serviço>.service`, configuração em `/opt/sdlc/<serviço>/` e dados em `/var/lib/sdlc/<serviço>/`.
 - A desinstalação padrão apaga os dados do serviço e exige `--yes`. `--keep-data` preserva dados e segredos para reinstalação.
@@ -87,7 +92,7 @@ Uma implementação futura para Windows deve ser adicionada em `<serviço>/windo
 
 ## Validação
 
-Os nove instaladores passaram por instalação, reinstalação, reboot e remoção completa na VM dedicada. Veja o [relatório da VM](docs/vm-validation.md) e [o que foi validado e as limitações](docs/validation.md). Para executar as verificações locais em Ubuntu:
+Os nove instaladores originais e o Technitium passaram por instalação, reinstalação, reboot e remoção completa na VM dedicada. Veja o [relatório dos nove serviços](docs/vm-validation.md), o [relatório Technitium](technitium/validation.md) e [o que foi validado e as limitações](docs/validation.md). Para executar as verificações locais em Ubuntu:
 
 ```bash
 bash tests/validate.sh

@@ -208,6 +208,23 @@ def prepare(args):
     output.mkdir(parents=True, exist_ok=True)
     catalog = json.loads(CATALOG.read_text())
     entries = []
+    selected = set(args.only or [])
+    available = {item['name'] for item in catalog['binaries']} | {'ubuntu26-' + group + '.tar.gz' for group in catalog['ubuntu_packages']}
+    if selected - available:
+        raise ValueError('Artefatos desconhecidos: ' + ', '.join(sorted(selected - available)))
+    if selected and (output / 'manifest.json').is_file():
+        previous = json.loads((output / 'manifest.json').read_text())
+        if previous.get('schema') != 1 or previous.get('platform') != 'ubuntu26.04-amd64':
+            raise ValueError('Manifesto anterior incompatível')
+        for entry in previous['artifacts']:
+            if entry['name'] in selected:
+                continue
+            if entry['name'] not in available:
+                raise ValueError('Artefato anterior fora do catálogo: ' + entry['name'])
+            target = output / entry['name']
+            if target.stat().st_size != entry['size'] or sha256(target) != entry['sha256']:
+                raise ValueError('Artefato anterior inválido: ' + entry['name'])
+            entries.append(entry)
 
     def prepare_one(item):
         expected = published_checksum(item)
@@ -223,9 +240,12 @@ def prepare(args):
         return dict(name=item["name"], version=item["version"], url=item["url"], sha256=sha256(target), size=target.stat().st_size, verification=verification)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        entries.extend(executor.map(prepare_one, catalog["binaries"]))
+        items = [item for item in catalog['binaries'] if not selected or item['name'] in selected]
+        entries.extend(executor.map(prepare_one, items))
     for group, packages in catalog["ubuntu_packages"].items():
         target = output / ("ubuntu26-" + group + ".tar.gz")
+        if selected and target.name not in selected:
+            continue
         subprocess.run(["bash", str(REPO / "scripts/linux/prepare-ubuntu-packages.sh"), str(target), *packages], check=True)
         entries.append(dict(name=target.name, version="ubuntu26.04", sha256=sha256(target), size=target.stat().st_size, verification="APT: metadados assinados Ubuntu", url="https://archive.ubuntu.com/ubuntu/"))
     manifest = dict(schema=1, platform="ubuntu26.04-amd64", artifacts=entries)
@@ -250,6 +270,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     command = sub.add_parser("prepare")
     command.add_argument("--output", default=str(REPO / "artifacts/cdn/ubuntu26-amd64"))
+    command.add_argument('--only', nargs='+', help='Prepara somente estes nomes, preservando entradas anteriores verificadas')
     command = sub.add_parser("fetch")
     for key in ["manifest", "base-url", "name", "output"]:
         command.add_argument("--" + key, required=True)
