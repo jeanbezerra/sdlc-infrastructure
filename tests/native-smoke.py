@@ -20,7 +20,7 @@ CDN = REPO / 'artifacts/cdn/ubuntu26-amd64'
 spec = importlib.util.spec_from_file_location('artifacts', REPO / 'scripts/linux/artifacts.py')
 artifacts = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(artifacts)
-SERVICES = ['postgresql', 'redis', 'prometheus', 'grafana', 'jenkins', 'keycloack', 'sonarqube', 'opensearch', 'nexus']
+SERVICES = ['postgresql', 'redis', 'prometheus', 'grafana', 'jenkins', 'keycloak', 'sonarqube', 'opensearch', 'nexus']
 PASSWORD = 'Aa1_native_smoke_0123456789abcdef'
 
 

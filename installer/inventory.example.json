@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "hosts": {
+    "codex": {
+      "address": "192.168.0.250",
+      "port": 22,
+      "user": "trendsoftware",
+      "host_key_sha256": "SHA256:c6en9QvkEqliepDh/4VMMLi645iCWhjjtofPPwzhIkA"
+    }
+  },
+  "deployments": {
+    "grafana-codex": {
+      "host": "codex",
+      "service": "grafana",
+      "config": "../grafana/linux/.env.example",
+      "manifest": "../artifacts/cdn/ubuntu26-amd64/manifest.json",
+      "overrides": {
+        "DOMAIN": "grafana.trendsoftware.brasil",
+        "ACCESS_CIDRS": "192.168.0.0/24",
+        "SSH_CIDRS": "192.168.0.0/24"
+      },
+      "files": {}
+    },
+    "dns-codex": {
+      "host": "codex",
+      "service": "technitium",
+      "config": "../technitium/linux/.env.example",
+      "manifest": "../artifacts/cdn/ubuntu26-amd64/manifest.json",
+      "overrides": {},
+      "files": {
+        "DNS_RECORDS_PATH": "../technitium/config/records.example.json"
+      }
+    }
+  }
+}

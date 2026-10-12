@@ -4,12 +4,15 @@ import json
 import re
 
 root = Path(__file__).resolve().parents[1]
-services = ['jenkins', 'grafana', 'prometheus', 'keycloack', 'nexus', 'sonarqube', 'opensearch', 'postgresql', 'redis', 'technitium']
+services = ['jenkins', 'grafana', 'prometheus', 'keycloak', 'nexus', 'sonarqube', 'opensearch', 'postgresql', 'redis', 'technitium']
 for service in services:
     for file in ['README.md', 'linux/install.sh', 'linux/uninstall.sh', 'linux/service.sh', 'linux/.env.example']:
         assert (root / service / file).is_file(), (service, file)
+for file in ['README.md', 'cli.py', 'remote.py', 'catalog.json', 'inventory.example.json', 'requirements.txt', 'validation.md']:
+    assert (root / 'installer' / file).is_file(), ('installer', file)
 for file in root.rglob('*.md'):
-    if 'artifacts/cdn' in str(file).replace('\\', '/'):
+    relative = file.relative_to(root)
+    if relative.parts[:2] == ('artifacts', 'cdn') or any(part in {'.git', '.validation', '.venv', '.state', '__pycache__', 'private'} for part in relative.parts):
         continue
     for link in re.findall(r'\]\(([^)]+)\)', file.read_text(encoding='utf-8')):
         if link.startswith(('https://', 'http://', '#')):

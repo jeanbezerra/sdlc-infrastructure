@@ -5,6 +5,10 @@
 *.pem
 __pycache__/
 .validation/
+installer/.venv/
+installer/.state/
+installer/inventory.json
+installer/private/
 technitium/config/records.json
 artifacts/cdn/**
 !artifacts/cdn/.gitkeep

@@ -1,0 +1,8 @@
+{
+  "native": ["grafana", "jenkins", "keycloak", "nexus", "opensearch", "postgresql", "prometheus", "redis", "sonarqube", "technitium"],
+  "pending": {
+    "argocd": "Instalador pendente: depende de Kubernetes.",
+    "harbor": "Instalador pendente: distribuição suportada exige containers.",
+    "kubernetes": "Instalador será reutilizado de outro projeto."
+  }
+}

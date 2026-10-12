@@ -13,14 +13,14 @@ Instalação nativa em **Ubuntu Server 26.04 LTS, amd64**, com binários oficiai
 | [Harbor](harbor/README.md) | Registro OCI, imagens, charts e análise de vulnerabilidades | Pendente: exige containers na distribuição suportada |
 | [Argo CD](argocd/README.md) | Entrega contínua GitOps no Kubernetes | Pendente: depende do cluster |
 | [Kubernetes](kubernetes/README.md) | Orquestração e execução das aplicações | Reservado para reutilizar outro projeto |
-| [Keycloak](keycloack/README.md) | Identidade, autenticação e SSO com OIDC/SAML | Instalador e desinstalador nativos |
+| [Keycloak](keycloak/README.md) | Identidade, autenticação e SSO com OIDC/SAML | Instalador e desinstalador nativos |
 | [PostgreSQL](postgresql/README.md) | Persistência relacional de aplicações e serviços | Pacotes oficiais Ubuntu 26.04 |
 | [Redis](redis/README.md) | Cache, sessões e estruturas de dados em memória | Pacotes oficiais Ubuntu 26.04 |
 | [Prometheus](prometheus/README.md) | Coleta e retenção de métricas | Instalador e desinstalador nativos |
 | [Grafana](grafana/README.md) | Dashboards e visualização de métricas | Instalador e desinstalador nativos |
 | [OpenSearch](opensearch/README.md) | Indexação e pesquisa de logs/eventos | Instalador e desinstalador nativos |
 
-A pasta `keycloack/` conserva o nome original do projeto; o produto e os serviços do sistema se chamam **Keycloak**.
+O [instalador remoto MVP](installer/README.md) permite selecionar um serviço e uma VM, conectar por SSH, elevar privilégios com sudo, instalar, verificar e desinstalar. A CLI roda no Windows/Linux e executa os instaladores nativos no Ubuntu 26.04; seu README apresenta exemplos e diagramas de sequência de cada comando.
 
 ## Como os serviços se relacionam
 
@@ -54,7 +54,7 @@ O desenho apresenta integrações possíveis. Os instaladores não configuram au
 5. Instale cada serviço pelo seu README. Prefira uma VM por serviço; portas locais distintas também permitem compartilhar uma VM, desde que haja capacidade.
 6. Configure as integrações do seu fluxo e valide backup/restore antes de usar dados importantes.
 
-Exemplo, a partir da raiz do projeto:
+Para operar uma VM remotamente, siga o [README do instalador](installer/README.md). Para executar diretamente na VM, a partir da raiz do projeto:
 
 ```bash
 cp grafana/linux/.env.example grafana/linux/.env
@@ -85,6 +85,7 @@ sudo bash grafana/linux/install.sh --config "$(pwd)/grafana/linux/.env"
 scripts/linux/               rotinas comuns, configurações e preparação do CDN
 artifacts/cdn/               arquivos grandes para publicar, fora do Git
 docs/                        orientações comuns e matriz de portas
+installer/                   CLI, inventário e executor de operações remotas por SSH
 tests/                       validação estática, testes nativos e verificador da VM
 ```
 

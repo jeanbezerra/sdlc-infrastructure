@@ -49,7 +49,7 @@ export SDLC_SERVICE_DB_PASSWORD="$(cat /home/ubuntu/keycloak-db-password)"
 sudo --preserve-env=SDLC_SERVICE_DB_PASSWORD -u sdlc-postgresql \
   /usr/lib/postgresql/18/bin/psql -X -v ON_ERROR_STOP=1 \
   -h /var/lib/sdlc/postgresql/run -p 15432 -U sdlc_admin -d postgres \
-  < keycloack/linux/database.sql
+  < keycloak/linux/database.sql
 unset SDLC_SERVICE_DB_PASSWORD
 ```
 
@@ -60,9 +60,9 @@ Transfira a senha com segurança para a VM da aplicação e a CA do PostgreSQL p
 ### 3. Editar os parâmetros
 
 ```bash
-cp keycloack/linux/.env.example keycloack/linux/.env
-nano keycloack/linux/.env
-chmod 600 keycloack/linux/.env
+cp keycloak/linux/.env.example keycloak/linux/.env
+nano keycloak/linux/.env
+chmod 600 keycloak/linux/.env
 ```
 
 Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL, ALLOW_HTTP_ARTIFACTS e MANIFEST_PATH. Configure também DB_HOST, DB_PORT=5432, DB_NAME, DB_USER, DB_PASSWORD_FILE e DB_CA_PATH. Para produção, informe TLS_CERT_PATH/TLS_KEY_PATH de uma CA confiável. Vazio gera certificado autoassinado para laboratório. Use valores literais, sem aspas/expansões. Confirme que SSH_CIDRS inclui seu IP antes de habilitar o firewall.
@@ -70,7 +70,7 @@ Ajuste DOMAIN, ACCESS_CIDRS, SSH_PORT, SSH_CIDRS, ARTIFACT_BASE_URL, ALLOW_HTTP_
 ### 4. Instalar e verificar
 
 ```bash
-sudo bash keycloack/linux/install.sh --config "$(pwd)/keycloack/linux/.env"
+sudo bash keycloak/linux/install.sh --config "$(pwd)/keycloak/linux/.env"
 sudo systemctl status sdlc-keycloak --no-pager
 sudo journalctl -u sdlc-keycloak -n 100 --no-pager
 sudo nginx -t
@@ -124,13 +124,13 @@ Uma falha conserva o estado para diagnóstico. Corrija a causa e retome com o me
 Faça backup. **Apaga dados locais e todos os recursos próprios do serviço:**
 
 ```bash
-sudo bash keycloack/linux/uninstall.sh --yes
+sudo bash keycloak/linux/uninstall.sh --yes
 ```
 
 Para remover da execução, mantendo os dados/segredos para reinstalar:
 
 ```bash
-sudo bash keycloack/linux/uninstall.sh --yes --keep-data
+sudo bash keycloak/linux/uninstall.sh --yes --keep-data
 ```
 
 O banco externo não é apagado pela remoção da aplicação. Sua remoção é uma operação separada do administrador. Pacotes APT, cache compartilhado, regras SSH e histórico de journal permanecem. Consulte [escopo da remoção](../docs/linux.md#desinstalar).
