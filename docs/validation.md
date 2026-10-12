@@ -7,7 +7,7 @@ bash tests/validate.sh
 bash tests/validate.sh --native
 ```
 
-O primeiro comando verifica sintaxe Bash, ShellCheck, extração segura de arquivos, checksums, HTTP privado com opt-in e validação de redirecionamentos, parsing declarativo de configuração, ownership/symlinks, wrappers pendentes, links Markdown e correspondência dos arquivos baixados ao manifesto. Precisa de Python 3.12+ e ShellCheck.
+O primeiro comando verifica sintaxe Bash, ShellCheck, extração segura de arquivos, checksums, HTTP privado com opt-in e validação de redirecionamentos, parsing declarativo de configuração, ownership/symlinks, wrappers pendentes, links Markdown e correspondência dos arquivos baixados ao manifesto. Também executa os testes do instalador remoto e o Ruff pelo uv. Precisa de Python 3.12+, ShellCheck e uv 0.13.x; as dependências Python ficam em `installer/pyproject.toml` e `installer/uv.lock`.
 
 `--native` usa os pacotes/binários baixados em diretórios temporários, sem root. Não instala APT no host, não cria contas/units reais e não muda o firewall. Inicializa um cluster PostgreSQL separado e processos nativos, validando TLS via Nginx, SCRAM, grants de aplicação/migrations, ACL Redis e APIs dos servidores. Requer espaço temporário para extrair as distribuições e memória para a aplicação de maior consumo. Os logs temporários são informados ao final.
 

@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import sys
 import tarfile
 import tempfile
 from types import SimpleNamespace
@@ -21,8 +22,12 @@ def load(name, path):
     return module
 
 
-cli = load('installer_cli', ROOT / 'installer/cli.py')
-remote = load('installer_remote', ROOT / 'installer/remote.py') if os.name == 'posix' else None
+sys.path.insert(0, str(ROOT / 'installer/src'))
+from sdlc_installer import core as cli
+from sdlc_installer import cli as command
+from sdlc_installer import operations, transport
+
+remote = load('installer_remote', ROOT / 'installer/src/sdlc_installer/resources/remote.py') if os.name == 'posix' else None
 
 
 class InstallerTests(unittest.TestCase):
@@ -104,8 +109,8 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(files, {})
 
     def test_uninstall_without_yes_never_connects(self):
-        with patch.object(cli, 'Remote') as connect, patch('sys.stderr', io.StringIO()):
-            self.assertEqual(cli.main(['uninstall', 'grafana', '--inventory', str(self.path)]), 1)
+        with patch.object(command, 'Remote') as connect, patch('sys.stderr', io.StringIO()), patch('sys.stdout', io.StringIO()):
+            self.assertEqual(command.main(['uninstall', 'grafana', '--inventory', str(self.path), '--state-dir', str(self.work)]), 1)
             connect.assert_not_called()
 
     def test_inputs_are_uploaded_and_remote_file_paths_are_rewritten(self):
@@ -126,7 +131,7 @@ class InstallerTests(unittest.TestCase):
                 return value
         args = argparse.Namespace(state_dir=str(self.work), timeout=30)
         with patch('sys.stdout', io.StringIO()):
-            self.assertEqual(cli.follow(FakeRemote(), 'grafana', 'a' * 24, args), 1)
+            self.assertEqual(operations.follow(FakeRemote(), 'grafana', 'a' * 24, args), 1)
         self.assertEqual((self.work / 'runs' / ('a' * 24) / 'operation.log').read_text(), 'first\nlast\n')
 
     def test_wrong_pin_is_rejected_before_auth_even_with_known_hosts(self):
@@ -147,9 +152,9 @@ class InstallerTests(unittest.TestCase):
         known = self.work / 'known_hosts'
         known.touch()
         host = dict(address='192.168.0.250', user='trendsoftware', known_hosts=str(known), host_key_sha256='SHA256:' + 'A' * 43)
-        with patch.object(cli, 'ssh_module', return_value=fake), patch.dict(os.environ, {}, clear=True):
+        with patch.object(transport, 'ssh_module', return_value=fake), patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(cli.InstallerError, 'Fingerprint'):
-                cli.Remote(host, SimpleNamespace(ask_pass=False, ask_sudo_pass=False))
+                transport.Remote(host, SimpleNamespace(ask_pass=False, ask_sudo_pass=False))
         self.assertFalse(client.authenticated)
         self.assertFalse(client.loaded_known_hosts)
 

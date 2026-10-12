@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import hashlib
+import os
 from pathlib import Path
 import tarfile
 import tempfile
@@ -89,6 +90,7 @@ class ArtifactSecurityTests(unittest.TestCase):
             self.assertEqual((output / 'bin/nexus').read_bytes(), b'abc')
             self.assertFalse((output / 'sonatype-work').exists())
 
+    @unittest.skipUnless(os.name == 'posix', 'Permissões executáveis requerem POSIX.')
     def test_zip_preserves_executable(self):
         with tempfile.TemporaryDirectory() as work:
             package = Path(work) / 'app.zip'

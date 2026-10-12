@@ -1,0 +1,26 @@
+# Copie para um arquivo privado e use --log-config CAMINHO.
+# Caminhos são relativos a este TOML. Opções da CLI têm precedência.
+[logging]
+console_enabled = true
+console_level = "INFO"
+console_format = "rich"       # rich, text, json
+console_color = "auto"        # auto, always, never
+file_enabled = true
+file_level = "DEBUG"
+file_format = "json"          # text, json
+file_path = "../.state/logs/installer.jsonl"
+rotation = "size"             # size, time, none
+max_bytes = 10485760
+backup_count = 5
+when = "midnight"             # S, M, H, D, midnight, W0...W6; rotation=time
+interval = 1
+utc = true
+timestamp_format = "%Y-%m-%dT%H:%M:%S%z"
+text_format = "{timestamp} {level:<8} {event} [{service}/{run}] {message}"
+include_context = true
+remote_level = "INFO"
+logger_levels = { paramiko = "WARNING" }
+redact_values = []            # prefira variáveis de ambiente para segredos
+redact_env = ["SDLC_SSH_PASSWORD", "SDLC_SUDO_PASSWORD", "SDLC_KEY_PASSPHRASE"]
+# Padrões adicionais substituem toda a ocorrência. Nunca desativam a proteção padrão.
+redact_patterns = []

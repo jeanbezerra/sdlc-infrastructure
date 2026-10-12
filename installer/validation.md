@@ -1,5 +1,26 @@
 # Validação do instalador remoto
 
+## Atualização uv, CLI e logging — 12/10/2026
+
+- Pacote `sdlc-installer 0.2.0` sincronizado pelo uv 0.13.0, com dependências e build declarados em TOML e lockfile conferido por `uv lock --check`.
+- **54 testes Python aprovados no Linux/WSL**, incluindo a cobertura anterior e novos testes de CLI, logging, rotação, templates, UTC/timezone local, JSON, histórico e redação de segredos divididos entre respostas.
+- Windows/Python 3.14.6: **49 aprovados e 5 ignorados por dependerem de POSIX**. Ruff, sintaxe Bash, ShellCheck, contrato de configuração, links Markdown e hashes dos 13 artefatos aprovados.
+- A versão mínima Python 3.11.17 foi validada no Linux com **54 testes aprovados**. A tentativa adicional no Windows/Python 3.11 foi impedida pela política de Controle de Aplicativo ao carregar a DLL `_overlapped`; não foi alterada nenhuma política do computador. A validação Windows concluída usa Python 3.14.6.
+- `uv build` gerou wheel e sdist; wheel construído a partir do sdist. `scripts/check-dist.py` conferiu catálogo, executor, dependências, entrypoint e ausência de conteúdo privado nos dois artefatos.
+- O wheel foi instalado com dependências do lock em um ambiente Python separado **fora do repositório**. O executável `sdlc-installer` foi chamado de outro diretório, usando `--repo`; sem essa opção ou `SDLC_REPO`, apresentou o erro de descoberta esperado.
+- Ciclo real do Grafana na VM `192.168.0.250`: instalação com `--no-follow`, reconexão via `status --follow`, verificação e remoção completa, todos concluídos com sucesso. O fluxo utilizou o CDN local existente.
+- O ciclo real foi repetido com o wheel final; **218 eventos JSON Lines** dos arquivos rotativos foram parseados e conferidos quanto à ausência da senha. Uma regex configurada também ocultou o IP nos eventos. A saída stdout de cada comando foi um único documento JSON. Recibos, histórico e logs por execução foram conferidos.
+
+| Operação pelo wheel | Execução | Resultado |
+| --- | --- | --- |
+| Instalação sem acompanhamento + retomada | `25bbfddd02fb48a58177fa81` | `succeeded` |
+| Verificação | `6a6d836829f647959272f6ab` | `succeeded` |
+| Remoção completa | `92737ff3b8744c3cac234c74` | `succeeded` |
+
+O executor Linux foi realocado como recurso do pacote, mantendo o protocolo e o uso exclusivo da biblioteca padrão no destino. Os logs rotativos pertencem ao controlador; a auditoria protegida do worker permanece na VM. Esta atualização não repetiu a homologação de todos os serviços: o ciclo real foi do Grafana, e a cobertura anterior dos outros serviços está registrada abaixo.
+
+## Homologação inicial do MVP — 11/10/2026
+
 Homologação realizada em **11/10/2026**, usando controlador Windows com Python 3.14.6/Paramiko 5.0.0 e VM dedicada `192.168.0.250`, Ubuntu 26.04 LTS amd64, aproximadamente 7,2 GiB de RAM. Os testes locais Linux foram executados no Ubuntu 26.04 via WSL. O CDN existente em `192.168.0.200` foi utilizado sem alterar seus artefatos.
 
 ## Verificações locais

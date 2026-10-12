@@ -8,11 +8,16 @@ services = ['jenkins', 'grafana', 'prometheus', 'keycloak', 'nexus', 'sonarqube'
 for service in services:
     for file in ['README.md', 'linux/install.sh', 'linux/uninstall.sh', 'linux/service.sh', 'linux/.env.example']:
         assert (root / service / file).is_file(), (service, file)
-for file in ['README.md', 'cli.py', 'remote.py', 'catalog.json', 'inventory.example.json', 'requirements.txt', 'validation.md']:
+for file in ['README.md', 'cli.py', 'remote.py', 'inventory.example.json', 'validation.md',
+             'pyproject.toml', 'uv.lock', '.python-version', 'config/logging.example.toml',
+             'src/sdlc_installer/cli.py', 'src/sdlc_installer/core.py',
+             'src/sdlc_installer/logging_config.py', 'src/sdlc_installer/operations.py',
+             'src/sdlc_installer/transport.py', 'src/sdlc_installer/resources/remote.py',
+             'src/sdlc_installer/resources/catalog.json', 'scripts/check-dist.py']:
     assert (root / 'installer' / file).is_file(), ('installer', file)
 for file in root.rglob('*.md'):
     relative = file.relative_to(root)
-    if relative.parts[:2] == ('artifacts', 'cdn') or any(part in {'.git', '.validation', '.venv', '.state', '__pycache__', 'private'} for part in relative.parts):
+    if relative.parts[:2] == ('artifacts', 'cdn') or any(part in {'.git', '.validation', '.venv', '.state', '__pycache__', 'private', 'dist', '.pytest_cache', '.ruff_cache'} for part in relative.parts):
         continue
     for link in re.findall(r'\]\(([^)]+)\)', file.read_text(encoding='utf-8')):
         if link.startswith(('https://', 'http://', '#')):

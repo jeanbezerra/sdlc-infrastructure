@@ -6,6 +6,9 @@
 __pycache__/
 .validation/
 installer/.venv/
+installer/dist/
+installer/.pytest_cache/
+installer/.ruff_cache/
 installer/.state/
 installer/inventory.json
 installer/private/
