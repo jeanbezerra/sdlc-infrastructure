@@ -31,7 +31,7 @@ class Output:
 
         table = Table(title=title)
         for column in columns:
-            table.add_column(column)
+            table.add_column(column, overflow="fold")
         for row in rows:
             table.add_row(*(self.redactor.text(item) if self.redactor else str(item) for item in row))
         self.console.print(table)

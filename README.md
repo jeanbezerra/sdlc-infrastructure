@@ -20,7 +20,7 @@ Instalação nativa em **Ubuntu Server 26.04 LTS, amd64**, com binários oficiai
 | [Grafana](grafana/README.md) | Dashboards e visualização de métricas | Instalador e desinstalador nativos |
 | [OpenSearch](opensearch/README.md) | Indexação e pesquisa de logs/eventos | Instalador e desinstalador nativos |
 
-O [instalador remoto](installer/README.md) permite selecionar um serviço e uma VM, conectar por SSH, elevar privilégios com sudo, instalar, verificar e desinstalar. O pacote é gerenciado pelo uv, com dependências em TOML, lockfile e build de wheel/sdist. A CLI Windows/Linux tem diagnóstico, histórico, saída JSON e logging configurável com rotação e ocultação de segredos; seu README apresenta exemplos e diagramas de sequência de cada comando.
+O [instalador remoto](installer/README.md) permite cadastrar hosts e serviços por comando, descobrir servidores SSH por IP/DNS/rede, listar e testar os hosts, conectar por SSH, elevar privilégios com sudo, instalar, verificar e desinstalar. O pacote é gerenciado pelo uv, com dependências em TOML, lockfile e build de wheel/sdist. A CLI Windows/Linux tem diagnóstico, histórico, saída JSON e logging configurável com rotação e ocultação de segredos; seu README apresenta exemplos e diagramas de sequência de cada comando.
 
 ## Como os serviços se relacionam
 

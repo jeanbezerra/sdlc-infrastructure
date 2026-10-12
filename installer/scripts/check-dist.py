@@ -27,6 +27,8 @@ with zipfile.ZipFile(wheel) as archive:
     assert all(not forbidden.intersection(Path(name).parts) for name in names)
     assert all(not name.endswith((".key", ".pem", ".env")) for name in names)
     assert "sdlc_installer/resources/remote.py" in names
+    assert "sdlc_installer/registration.py" in names
+    assert "sdlc_installer/discovery.py" in names
     catalog = json.loads(archive.read("sdlc_installer/resources/catalog.json"))
     assert len(catalog["native"]) == 10
     (entry,) = [name for name in names if name.endswith(".dist-info/entry_points.txt")]

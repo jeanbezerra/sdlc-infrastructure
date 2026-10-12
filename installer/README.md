@@ -7,6 +7,9 @@ CLI para selecionar um serviço, conectar a uma VM por SSH, elevar privilégios 
 | Comando | Função | Conecta à VM? |
 | --- | --- | --- |
 | `services` | Lista os dez serviços nativos, versões e serviços pendentes | Não |
+| `register HOST` | Cadastra host e, com `--service`, gera o deployment; `--check` testa DNS/SSH | Somente com `--check`, sem autenticação |
+| `hosts [HOST ...]` | Lista hosts cadastrados; `--check` testa DNS/SSH e confere a chave | Somente com `--check`, sem autenticação |
+| `discover DESTINO ...` | Encontra SSH em IPs, nomes ou CIDRs; `--register --user USUARIO` cadastra os encontrados | Sim, sem autenticação |
 | `deployments` | Lista destinos do inventário | Não |
 | `doctor [DEPLOYMENT]` | Diagnostica entradas locais, manifesto, payload e confiança SSH | Não |
 | `history` | Lista recibos locais com filtros | Não |
@@ -31,7 +34,6 @@ Windows/PowerShell, instalação oficial do uv e preparação:
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/0.13.0/install.ps1 | iex"
 # Abra um novo terminal para atualizar o PATH.
 uv sync --project installer --locked
-Copy-Item installer/inventory.example.json installer/inventory.json
 uv run --project installer --locked sdlc-installer --version
 uv run --project installer --locked sdlc-installer services
 ```
@@ -42,8 +44,6 @@ Linux:
 curl -LsSf https://astral.sh/uv/0.13.0/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 uv sync --project installer --locked
-cp installer/inventory.example.json installer/inventory.json
-chmod 600 installer/inventory.json
 uv run --project installer --locked sdlc-installer services
 ```
 
@@ -63,7 +63,52 @@ As demais dependências dos serviços são instaladas pelos scripts existentes a
 
 ## 2. Configurar o inventário
 
-Edite `installer/inventory.json`. O exemplo contém o host `codex` e os deployments `grafana-codex` e `dns-codex`, apontando para a VM de homologação `192.168.0.250`. Cada deployment associa **serviço + host + configuração**. Para produção, ajuste IPs, usuários, redes e domínio.
+### Cadastro por comando
+
+Informe nome, IP ou DNS e usuário. O installer cria `installer/inventory.json` se ele ainda não existir, preserva outros cadastros e permite registrar uma VM desligada para conectá-la depois:
+
+```bash
+uv run --project installer --locked sdlc-installer register grafana-vm --address 192.168.0.203 --user trendsoftware --check
+uv run --project installer --locked sdlc-installer hosts --check
+```
+
+Para cadastrar também o serviço, acrescente serviço, domínio e redes autorizadas:
+
+```bash
+uv run --project installer --locked sdlc-installer register grafana-vm --address 192.168.0.203 --user trendsoftware --service grafana --domain grafana.trendsoftware.brasil --cidrs 192.168.0.0/24
+uv run --project installer --locked sdlc-installer plan grafana-grafana-vm
+```
+
+O nome automático do deployment é `SERVIÇO-HOST`; `--deployment grafana-lan` permite escolher outro. A CLI encontra o `.env.example` do serviço e o manifesto em `artifacts/cdn/ubuntu26-amd64/manifest.json`, registra os caminhos relativos ao inventário e ajusta `SSH_PORT`. `--cidrs` define acesso e SSH; `--ssh-cidrs` permite uma rede SSH diferente. Para Technitium com endereço IPv4, também preenche `DNS_LISTEN_IPV4` e `DNS_CIDRS`; os registros DNS próprios devem ser associados com `--file DNS_RECORDS_PATH=caminho/records.json`.
+
+Use `--config` e `--manifest` para arquivos próprios, `--set KEY=value` para parâmetros adicionais e `--file KEY=caminho` para certificados/segredos. Essas opções de caminho são relativas **ao diretório atual do comando**; a CLI grava sua referência relativa ao inventário. Quando houver parâmetros como banco externo, CA ou arquivo de senha, forneça os valores do ambiente. `pending` informa a confiança SSH ausente e a primeira validação de instalação pendente, incluindo manifesto/arquivos faltantes. O cadastro é salvo para completar depois; `plan` e `doctor` continuam validando antes da instalação.
+
+Repetir o mesmo cadastro não reescreve o arquivo. Para alterar um host ou deployment existente, use `--replace`. Opções SSH do host que não forem informadas novamente são preservadas. A gravação usa substituição por arquivo temporário; no Linux, o arquivo criado tem permissão `600`.
+
+Nomes DNS permanecem no cadastro e são resolvidos a cada teste/conexão. `hosts --check` mostra IPs resolvidos, porta, resposta SSH e comparação da chave com o pin/`known_hosts`. Um host `reachable` respondeu ao protocolo SSH; isso ainda não comprova autenticação, sudo ou compatibilidade do sistema. `unknown` significa que a chave precisa ser conferida; `key_mismatch` e falhas de conexão retornam código 1. `register --check` também retorna código 1 se a sondagem falhar, mantendo o cadastro salvo.
+
+### Encontrar e cadastrar hosts
+
+Para testar os endereços conhecidos, inclusive nomes DNS:
+
+```bash
+uv run --project installer --locked sdlc-installer discover 192.168.0.203 192.168.0.250 grafana-vm.trendsoftware.brasil
+```
+
+Ou informe explicitamente uma faixa de rede e o usuário dos hosts que deseja cadastrar:
+
+```bash
+uv run --project installer --locked sdlc-installer discover 192.168.0.0/24 --register --user trendsoftware
+uv run --project installer --locked sdlc-installer hosts --check
+```
+
+Somente servidores que completam a negociação SSH são cadastrados. A sondagem usa a porta 22 por padrão (`--port` altera), timeout de 3 segundos por conexão (`--connect-timeout`) e até 16 sondagens simultâneas (`--workers`, máximo 64). O limite padrão é 256 destinos; `--max-hosts` permite até 4096. Faixas maiores são recusadas antes da sondagem. Falhas individuais aparecem em `failures` na saída `--json`; a tabela humana mostra os encontrados. Nenhum resultado retorna código 1. Hosts já cadastrados com o mesmo endereço/porta são reutilizados se o usuário coincidir.
+
+Os fingerprints de descoberta são **observados**, sem serem fixados automaticamente como confiança. Confira a chave conforme a seção de autenticação e registre-a com `register ... --host-key-sha256 SHA256:... --replace`, ou forneça `--known-hosts`. O cadastro e a descoberta não iniciam uma instalação.
+
+### Formato JSON
+
+Também é possível copiar `installer/inventory.example.json` para `installer/inventory.json` e editá-lo. O exemplo contém o host `codex` e os deployments `grafana-codex` e `dns-codex`, apontando para a VM de homologação `192.168.0.250`. Cada deployment associa **serviço + host + configuração**. Para produção, ajuste IPs, usuários, redes e domínio.
 
 ```json
 {

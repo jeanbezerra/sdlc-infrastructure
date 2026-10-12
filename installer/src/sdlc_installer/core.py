@@ -64,6 +64,10 @@ def local_path(base, value):
 
 def inventory(path):
     data = json.loads(regular_file(path).read_text(encoding="utf-8"))
+    return validate_inventory(data)
+
+
+def validate_inventory(data):
     require(
         isinstance(data, dict) and set(data) == {"schema", "hosts", "deployments"} and data["schema"] == 1,
         "Inventário exige schema=1, hosts e deployments.",
@@ -96,6 +100,16 @@ def inventory(path):
                 "Fingerprint SHA256 inválido.",
             )
     return data
+
+
+def inventory_host(path, name):
+    data = inventory(path)
+    require(name in data["hosts"], "Host ausente no inventário: " + name)
+    host = dict(data["hosts"][name])
+    for key in ("identity_file", "known_hosts"):
+        if host.get(key):
+            host[key] = str(local_path(Path(path).parent, host[key]).absolute())
+    return host
 
 
 def env_file(path):

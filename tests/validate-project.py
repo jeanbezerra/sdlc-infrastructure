@@ -11,6 +11,7 @@ for service in services:
 for file in ['README.md', 'cli.py', 'remote.py', 'inventory.example.json', 'validation.md',
              'pyproject.toml', 'uv.lock', '.python-version', 'config/logging.example.toml',
              'src/sdlc_installer/cli.py', 'src/sdlc_installer/core.py',
+             'src/sdlc_installer/registration.py', 'src/sdlc_installer/discovery.py',
              'src/sdlc_installer/logging_config.py', 'src/sdlc_installer/operations.py',
              'src/sdlc_installer/transport.py', 'src/sdlc_installer/resources/remote.py',
              'src/sdlc_installer/resources/catalog.json', 'scripts/check-dist.py']:

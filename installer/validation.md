@@ -1,5 +1,13 @@
 # Validação do instalador remoto
 
+## Cadastro e descoberta do inventário — 12/10/2026
+
+- `register` cadastra hosts e gera deployments usando os modelos e caminhos do projeto; `hosts --check` sonda DNS/SSH e confere a chave; `discover` aceita IPs, nomes DNS e CIDRs explícitos, com cadastro opcional.
+- **82 testes Python aprovados no Linux/WSL e no Python 3.11**. Windows/Python 3.14: **77 aprovados e 5 ignorados por dependerem de POSIX**. A nova cobertura verifica cadastro repetido, conflitos, preservação de entradas, falha de gravação, alteração concorrente observável, valores inválidos, caminhos, arquivos privados, DNS, limites de descoberta e confiança SSH.
+- Ruff, conferência do lock, estrutura/links Markdown, hashes dos 13 artefatos e conteúdo do wheel/sdist aprovados. Os dois módulos novos são conferidos no wheel.
+- Teste real no host cadastrado `codex`, `192.168.0.250:22`: SSH acessível e chave `ssh-ed25519` correspondente ao pin existente. O cadastro de um deployment Grafana em `.validation/inventory-onboarding.json` passou pelo `plan`, sem iniciar instalação; a descoberta com cadastro reutilizou o mesmo host e preservou seu pin.
+- As sondagens não autenticam, não executam comandos remotos e não estabelecem confiança automaticamente. Autenticação, sudo, compatibilidade do sistema e saúde dos serviços continuam sendo verificados pelas operações existentes. A descoberta real desta validação foi limitada à VM conhecida; a cobertura de faixas de rede usa testes locais simulados.
+
 ## Atualização uv, CLI e logging — 12/10/2026
 
 - Pacote `sdlc-installer 0.2.0` sincronizado pelo uv 0.13.0, com dependências e build declarados em TOML e lockfile conferido por `uv lock --check`.

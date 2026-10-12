@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
-from . import __version__, core
+from . import __version__, core, discovery, registration
 from .logging_config import LogSession, Redactor, settings
 from .operations import follow, history, save_report
 from .paths import repository
@@ -59,6 +59,13 @@ def positive_int(value):
     number = int(value)
     if number <= 0:
         raise argparse.ArgumentTypeError("informe um inteiro positivo")
+    return number
+
+
+def ssh_port(value):
+    number = int(value)
+    if not 1 <= number <= 65535:
+        raise argparse.ArgumentTypeError("informe uma porta entre 1 e 65535")
     return number
 
 
@@ -117,6 +124,9 @@ def parser():
     sub = command.add_subparsers(dest="command", required=True, title="Comandos")
     descriptions = {
         "services": "Lista serviços, versões, portas e pendências.",
+        "register": "Cadastra host e, opcionalmente, um serviço sem editar JSON.",
+        "hosts": "Lista hosts; --check testa resolução DNS e SSH sem autenticar.",
+        "discover": "Sonda IPs, nomes ou uma rede e lista os servidores SSH encontrados.",
         "deployments": "Lista os destinos configurados, sem SSH.",
         "doctor": "Diagnostica repositório, inventário e entradas locais, sem SSH.",
         "history": "Lista recibos locais; filtros por deployment/estado.",
@@ -131,6 +141,88 @@ def parser():
         cmd = sub.add_parser(action, help=description, description=description)
         common(cmd)
         if action in {"services", "deployments"}:
+            continue
+        if action in {"register", "hosts", "discover"}:
+            cmd.add_argument(
+                "--connect-timeout",
+                type=positive,
+                default=3,
+                help="Timeout da conexão/negociação SSH em segundos (3).",
+            )
+            if action == "hosts":
+                cmd.add_argument("hosts", nargs="*", help="Nomes cadastrados; sem argumento, lista todos.")
+                cmd.add_argument(
+                    "--check",
+                    action="store_true",
+                    help="Testa DNS, porta e protocolo SSH; confere a chave cadastrada.",
+                )
+            elif action == "discover":
+                cmd.add_argument("targets", nargs="+", help="IPs, nomes DNS ou CIDRs explícitos.")
+                cmd.add_argument("--port", type=ssh_port, default=22)
+                cmd.add_argument(
+                    "--max-hosts",
+                    type=positive_int,
+                    default=256,
+                    help="Limite total de destinos (256; máximo 4096).",
+                )
+                cmd.add_argument(
+                    "--workers", type=positive_int, default=16, help="Sondagens simultâneas (16; máximo 64)."
+                )
+                cmd.add_argument(
+                    "--register",
+                    action="store_true",
+                    help="Cadastra os hosts encontrados; não confia automaticamente nas chaves.",
+                )
+                cmd.add_argument("--user", help="Usuário SSH para cadastrar; exigido com --register.")
+            else:
+                cmd.add_argument("host", help="Nome do host no inventário.")
+                cmd.add_argument(
+                    "--address", required=True, help="IP ou nome DNS; nomes são resolvidos a cada conexão."
+                )
+                cmd.add_argument("--user", required=True, help="Usuário SSH.")
+                cmd.add_argument("--port", type=ssh_port, help="Porta SSH; padrão 22 para novo host.")
+                cmd.add_argument(
+                    "--identity-file", help="Chave privada local; caminho relativo ao diretório atual."
+                )
+                cmd.add_argument("--known-hosts", help="Arquivo local de chaves SSH confiáveis.")
+                cmd.add_argument("--host-key-sha256", help="Fingerprint SHA256 previamente conferido.")
+                cmd.add_argument(
+                    "--replace", action="store_true", help="Autoriza alterar um cadastro existente."
+                )
+                cmd.add_argument(
+                    "--check",
+                    action="store_true",
+                    help="Testa DNS/SSH após salvar, mesmo se a VM estiver indisponível.",
+                )
+                cmd.add_argument(
+                    "--service",
+                    choices=sorted(core.CATALOG["native"]),
+                    help="Cria também o deployment SERVIÇO-HOST.",
+                )
+                cmd.add_argument("--deployment", help="Nome alternativo do deployment.")
+                cmd.add_argument("--domain", help="Domínio do serviço.")
+                cmd.add_argument("--cidrs", help="CIDRs de acesso e SSH, separados por vírgula.")
+                cmd.add_argument("--ssh-cidrs", help="CIDRs SSH diferentes de --cidrs.")
+                cmd.add_argument("--config", help=".env local próprio; padrão: modelo do serviço.")
+                cmd.add_argument(
+                    "--manifest", help="Manifesto local confiável; padrão: manifesto do CDN do projeto."
+                )
+                cmd.add_argument(
+                    "--set",
+                    dest="set_values",
+                    action="append",
+                    default=[],
+                    metavar="KEY=value",
+                    help="Sobrescreve parâmetro do serviço; pode repetir.",
+                )
+                cmd.add_argument(
+                    "--file",
+                    dest="files",
+                    action="append",
+                    default=[],
+                    metavar="KEY=PATH",
+                    help="Associa arquivo local ao serviço; pode repetir.",
+                )
             continue
         if action == "history":
             cmd.add_argument("--deployment")
@@ -254,6 +346,90 @@ def doctor(args):
 
 def execute(args):
     output, session = args.output, args.session
+    if args.command == "register":
+        result = registration.register(args)
+        session.context["host"] = args.address
+        session.event("inventory_registered", "Cadastro salvo no inventário.")
+        code = 0
+        if args.check:
+            result["check"] = discovery.probe(
+                core.inventory_host(args.inventory, args.host), args.connect_timeout
+            )
+            code = 0 if result["check"]["state"] == "reachable" else 1
+        output.result(result, "Cadastro no inventário")
+        return code
+    if args.command == "hosts":
+        with output.progress("Testando hosts…"):
+            records = discovery.host_records(args)
+        output.table(
+            [
+                (
+                    row["host"],
+                    row["address"]
+                    + (
+                        "\n" + ", ".join(row["resolved_addresses"])
+                        if row.get("resolved_addresses") and row["resolved_addresses"] != [row["address"]]
+                        else ""
+                    ),
+                    row["user"],
+                    row["port"],
+                    row["state"],
+                    row.get("ssh_trust", "—"),
+                )
+                for row in records
+            ],
+            ["Host", "Endereço / IPs", "Usuário", "SSH", "Estado", "Chave SSH"],
+            title="Hosts do inventário",
+            data={
+                "hosts": records,
+                "scope": "DNS/SSH sem autenticação" if args.check else "inventário local",
+            },
+        )
+        return 1 if args.check and any(row["state"] != "reachable" for row in records) else 0
+    if args.command == "discover":
+        core.require(not args.register or args.user, "--register exige --user.")
+        addresses = discovery.targets(args.targets, args.max_hosts)
+        if args.register:
+            registration.read_inventory(args.inventory)
+            core.validate_inventory(
+                dict(
+                    schema=1,
+                    hosts={"candidate": dict(address=addresses[0], port=args.port, user=args.user)},
+                    deployments={},
+                )
+            )
+        with output.progress("Procurando servidores SSH…"):
+            records = discovery.scan(
+                [dict(address=address, port=args.port) for address in addresses],
+                args.connect_timeout,
+                args.workers,
+            )
+        found = [row for row in records if row["state"] == "reachable"]
+        failures = [row for row in records if row["state"] != "reachable"]
+        if args.register:
+            registration.register_discovered(args, found)
+        output.table(
+            [
+                (
+                    row.get("host", "—"),
+                    row["address"],
+                    row["port"],
+                    ", ".join(row["resolved_addresses"]),
+                    row["fingerprint"],
+                    "sim" if row.get("registered") else "não",
+                )
+                for row in found
+            ],
+            ["Host", "Endereço", "SSH", "IPs resolvidos", "Fingerprint observado", "Cadastrado"],
+            title=f"Servidores SSH: {len(found)} encontrados em {len(records)} destinos",
+            data={
+                "hosts": found,
+                "failures": failures,
+                "scanned": len(records),
+                "scope": "DNS/SSH sem autenticação; fingerprints observados não estabelecem confiança",
+            },
+        )
+        return 0 if found else 1
     if args.command == "services":
         native = [core.metadata(service) for service in core.CATALOG["native"]]
         rows = [
