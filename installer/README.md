@@ -1,11 +1,51 @@
 # Instalador remoto SDLC com uv
 
-CLI para selecionar um serviço, conectar a uma VM por SSH, elevar privilégios com `sudo` e executar os instaladores deste projeto. A máquina controladora pode ser **Windows ou Linux**, com Python **3.11 ou superior**; os destinos suportados são **Ubuntu Server 26.04 LTS amd64 com systemd**. Os downloads continuam vindo do CDN local, sem Docker.
+Terminal interativo para cadastrar VMs, preparar serviços e acompanhar instalações por SSH/sudo. A máquina controladora pode ser **Windows ou Linux**, com Python **3.11 ou superior**; os destinos suportados são **Ubuntu Server 26.04 LTS amd64 com systemd**. Os downloads continuam vindo do CDN local, sem Docker.
+
+## Abrir o terminal interativo
+
+Depois de preparar o uv, execute uma vez na raiz do projeto:
+
+```bash
+uv run --project installer --locked python -m sdlc_installer
+```
+
+No Windows, também é possível abrir [start.cmd](start.cmd) com dois cliques. Ele entra na raiz do projeto e abre o mesmo menu pelo módulo Python. Escolha as ações pelo número e responda aos formulários; os valores sugeridos são aceitos com Enter.
+
+Se a Segurança do Windows informar que não consegue confirmar quem publicou `sdlc-installer.exe`, use esse launcher ou o comando acima. O executável de entrada gerado na instalação do pacote não tem assinatura Authenticode; o launcher usa o Python do ambiente do projeto. Essa abertura foi validada com Python 3.14.6 assinado, mantendo a proteção do Windows. Os argumentos dos comandos também podem ser usados após `python -m sdlc_installer`.
+
+```text
+1. 1/4 · Cadastrar VMs por IP ou nome DNS
+2. 2/4 · Preparar serviço
+3. 3/4 · Revisar e instalar
+4. 4/4 · Verificar instalação
+5. Ver VMs, testar conexão e configurar SSH
+6. Histórico e acompanhar execuções
+7. Remover serviço
+8. Trocar inventário
+0. Sair
+```
+
+O fluxo guiado é:
+
+1. Informe IPs ou nomes DNS separados por espaço/vírgula, usuário e porta SSH. Revise e salve; as VMs são cadastradas mesmo quando estão desligadas, e o teste mostra o resultado de cada uma. Para as VMs acessíveis, aceite a chave apresentada e informe a senha SSH sem eco. O menu testa o login, registra a chave e marca **Válido** somente após autenticar. Uma chave diferente da registrada exige aceitar a substituição; se o login falhar, a chave anterior é mantida.
+2. Selecione uma VM e um serviço. Informe domínio e redes; caminhos e porta SSH são preenchidos automaticamente. Serviços com PostgreSQL/DNS solicitam seus campos e arquivos específicos. Ajustes adicionais permitem alterar CDN, redes SSH, parâmetros e arquivos TLS. Revise e salve a preparação.
+3. Selecione a instalação e veja a revisão antes de iniciá-la. O menu orienta a aceitação da chave e o teste com senha quando necessário, executa o diagnóstico local e pergunta a forma de login e a necessidade de senha sudo. O login validado na mesma sessão é reutilizado. Senhas são solicitadas sem eco. O progresso e o resultado aparecem no terminal.
+4. Selecione a instalação para verificar seu estado. O histórico permite escolher uma execução existente e retomar o acompanhamento sem digitar o ID.
+
+`Ctrl+C` cancela um formulário antes de salvar e volta ao menu; no menu principal, encerra a sessão. Interromper o acompanhamento de um trabalho já iniciado mantém a execução na VM, recuperável pelo histórico. Remover serviço permite preservar dados ou apagá-los, e exige digitar o nome da instalação para confirmar.
+
+A opção **Ver VMs, testar conexão e configurar SSH → selecionar VM → Validar login com senha** também adiciona ou substitui a chave apresentada, sem digitar o fingerprint. O teste autentica com senha e encerra a conexão; depois salva a chave e o resultado com data, endereço, usuário e porta. **Último login** mostra Válido, Falhou ou Pendente; mudar o destino/usuário/porta/chave deixa a validação pendente. Válido indica o último login bem-sucedido, enquanto a coluna Estado mostra a conectividade atual. Essa aceitação registra a chave apresentada pela conexão escolhida.
+
+O acesso SSH permite selecionar chave privada/agente ou `known_hosts`, e alterar usuário/porta. Alterar a porta por esse formulário atualiza `SSH_PORT` nos deployments associados. A senha validada é mantida somente em memória até fechar o menu ou trocar inventário/acesso, e não é gravada no inventário nem nos logs. Arquivos de senha do banco são referenciados pelo inventário; senhas de SSH, sudo e chave privada permanecem fora dele.
+
+O menu usa um terminal com entrada e saída interativas. Para automação, os comandos abaixo continuam disponíveis, inclusive com `--json`. Sem comando em pipes/execuções sem terminal, ou com `menu --json`, a CLI retorna erro de uso em vez de aguardar perguntas.
 
 ## Funcionalidades e comandos
 
 | Comando | Função | Conecta à VM? |
 | --- | --- | --- |
+| Sem comando / `menu` | Abre menu, formulários, revisão e acompanhamento guiados | Conforme a ação escolhida |
 | `services` | Lista os dez serviços nativos, versões e serviços pendentes | Não |
 | `register HOST` | Cadastra host e, com `--service`, gera o deployment; `--check` testa DNS/SSH | Somente com `--check`, sem autenticação |
 | `hosts [HOST ...]` | Lista hosts cadastrados; `--check` testa DNS/SSH e confere a chave | Somente com `--check`, sem autenticação |
@@ -34,8 +74,7 @@ Windows/PowerShell, instalação oficial do uv e preparação:
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/0.13.0/install.ps1 | iex"
 # Abra um novo terminal para atualizar o PATH.
 uv sync --project installer --locked
-uv run --project installer --locked sdlc-installer --version
-uv run --project installer --locked sdlc-installer services
+uv run --project installer --locked python -m sdlc_installer
 ```
 
 Linux:
@@ -44,7 +83,7 @@ Linux:
 curl -LsSf https://astral.sh/uv/0.13.0/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 uv sync --project installer --locked
-uv run --project installer --locked sdlc-installer services
+uv run --project installer --locked sdlc-installer
 ```
 
 As dependências de execução **Paramiko e Rich**, os requisitos do build e as ferramentas de desenvolvimento **pytest e Ruff** ficam no [pyproject.toml](pyproject.toml). O [uv.lock](uv.lock) fixa as versões e hashes e deve ser versionado. `--locked` recusa mudanças que exigiriam atualizar o lock; use `uv add --project installer PACOTE` ou `uv lock --project installer --upgrade-package PACOTE` quando desejar atualizar uma dependência. Para um ambiente somente de execução, use `uv sync --project installer --locked --no-dev`.
@@ -85,7 +124,7 @@ Use `--config` e `--manifest` para arquivos próprios, `--set KEY=value` para pa
 
 Repetir o mesmo cadastro não reescreve o arquivo. Para alterar um host ou deployment existente, use `--replace`. Opções SSH do host que não forem informadas novamente são preservadas. A gravação usa substituição por arquivo temporário; no Linux, o arquivo criado tem permissão `600`.
 
-Nomes DNS permanecem no cadastro e são resolvidos a cada teste/conexão. `hosts --check` mostra IPs resolvidos, porta, resposta SSH e comparação da chave com o pin/`known_hosts`. Um host `reachable` respondeu ao protocolo SSH; isso ainda não comprova autenticação, sudo ou compatibilidade do sistema. `unknown` significa que a chave precisa ser conferida; `key_mismatch` e falhas de conexão retornam código 1. `register --check` também retorna código 1 se a sondagem falhar, mantendo o cadastro salvo.
+Nomes DNS permanecem no cadastro e são resolvidos a cada teste/conexão. `hosts --check` mostra IPs resolvidos, porta, resposta SSH, comparação da chave com o pin/`known_hosts` e último login registrado pelo menu. Na saída JSON, `ssh_login` contém `valid`, `failed` ou `pending`; `ssh_validation` traz o registro histórico quando existente. A sondagem não renova esse login. Um host `reachable` respondeu ao protocolo SSH; isso ainda não comprova autenticação, sudo ou compatibilidade do sistema. `unknown` significa que a chave precisa ser aceita/conferida; `key_mismatch` e falhas de conexão retornam código 1. `register --check` também retorna código 1 se a sondagem falhar, mantendo o cadastro salvo.
 
 ### Encontrar e cadastrar hosts
 
@@ -104,7 +143,7 @@ uv run --project installer --locked sdlc-installer hosts --check
 
 Somente servidores que completam a negociação SSH são cadastrados. A sondagem usa a porta 22 por padrão (`--port` altera), timeout de 3 segundos por conexão (`--connect-timeout`) e até 16 sondagens simultâneas (`--workers`, máximo 64). O limite padrão é 256 destinos; `--max-hosts` permite até 4096. Faixas maiores são recusadas antes da sondagem. Falhas individuais aparecem em `failures` na saída `--json`; a tabela humana mostra os encontrados. Nenhum resultado retorna código 1. Hosts já cadastrados com o mesmo endereço/porta são reutilizados se o usuário coincidir.
 
-Os fingerprints de descoberta são **observados**, sem serem fixados automaticamente como confiança. Confira a chave conforme a seção de autenticação e registre-a com `register ... --host-key-sha256 SHA256:... --replace`, ou forneça `--known-hosts`. O cadastro e a descoberta não iniciam uma instalação.
+Os fingerprints de descoberta são **observados**, sem serem fixados automaticamente como confiança. No menu, selecione a VM e valide o login com senha para aceitar e registrar a chave. Pela CLI, confira a chave conforme a seção de autenticação e registre-a com `register ... --host-key-sha256 SHA256:... --replace`, ou forneça `--known-hosts`. O cadastro e a descoberta não iniciam uma instalação.
 
 ### Formato JSON
 
@@ -160,7 +199,7 @@ Para Technitium, o exemplo já mapeia `DNS_RECORDS_PATH` para [records.example.j
 
 ## 3. Autenticação e elevação
 
-Por padrão, a CLI tenta a chave definida em `identity_file`, chaves locais ou agente SSH compatível. Ela valida a chave do servidor usando `known_hosts`, o arquivo `~/.ssh/known_hosts` ou um fingerprint SHA256 fixado em `host_key_sha256`. Não aceita automaticamente um servidor desconhecido. A política utiliza os mecanismos de verificação da [API oficial do Paramiko](https://docs.paramiko.org/en/stable/api/client.html).
+Por padrão, a CLI tenta a chave definida em `identity_file`, chaves locais ou agente SSH compatível. Ela valida a chave do servidor usando `known_hosts`, o arquivo `~/.ssh/known_hosts` ou um fingerprint SHA256 fixado em `host_key_sha256`. O menu permite aceitar a chave e testar o login antes de registrá-la; os comandos remotos usam a confiança já cadastrada. A política utiliza os mecanismos de verificação da [API oficial do Paramiko](https://docs.paramiko.org/en/stable/api/client.html).
 
 Quando `host_key_sha256` está preenchido, esse fingerprint é a fonte de confiança e é conferido antes da autenticação. Sem ele, a fonte de confiança é `known_hosts`.
 

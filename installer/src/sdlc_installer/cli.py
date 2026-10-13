@@ -115,14 +115,15 @@ def parser():
     command = ArgumentParser(
         prog="sdlc-installer",
         description=__doc__,
-        epilog="Exemplo: sdlc-installer install grafana-codex --ask-pass --ask-sudo-pass\nUse COMANDO --help para as opções específicas.",
+        epilog="Sem comando, abre o menu interativo em um terminal.\nUse COMANDO --help para automação e opções específicas.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     common(command)
     command.set_defaults(**DEFAULTS)
     command.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    sub = command.add_subparsers(dest="command", required=True, title="Comandos")
+    sub = command.add_subparsers(dest="command", title="Comandos")
     descriptions = {
+        "menu": "Abre o terminal interativo com etapas guiadas.",
         "services": "Lista serviços, versões, portas e pendências.",
         "register": "Cadastra host e, opcionalmente, um serviço sem editar JSON.",
         "hosts": "Lista hosts; --check testa resolução DNS e SSH sem autenticar.",
@@ -140,7 +141,7 @@ def parser():
     for action, description in descriptions.items():
         cmd = sub.add_parser(action, help=description, description=description)
         common(cmd)
-        if action in {"services", "deployments"}:
+        if action in {"menu", "services", "deployments"}:
             continue
         if action in {"register", "hosts", "discover"}:
             cmd.add_argument(
@@ -252,6 +253,11 @@ def parser():
             cmd.add_argument("--ask-pass", action="store_true", help="Solicita a senha SSH sem exibir.")
             cmd.add_argument("--ask-sudo-pass", action="store_true", help="Solicita a senha sudo sem exibir.")
             cmd.add_argument(
+                "--ask-key-passphrase",
+                action="store_true",
+                help="Solicita a senha da chave privada sem exibir.",
+            )
+            cmd.add_argument(
                 "--timeout", type=positive, default=3600, help="Limite do acompanhamento em segundos (3600)."
             )
             cmd.add_argument(
@@ -346,6 +352,10 @@ def doctor(args):
 
 def execute(args):
     output, session = args.output, args.session
+    if args.command == "menu":
+        from .interactive import run
+
+        return run(args)
     if args.command == "register":
         result = registration.register(args)
         session.context["host"] = args.address
@@ -375,10 +385,11 @@ def execute(args):
                     row["port"],
                     row["state"],
                     row.get("ssh_trust", "—"),
+                    row["ssh_login"],
                 )
                 for row in records
             ],
-            ["Host", "Endereço / IPs", "Usuário", "SSH", "Estado", "Chave SSH"],
+            ["Host", "Endereço / IPs", "Usuário", "SSH", "Estado", "Chave SSH", "Último login"],
             title="Hosts do inventário",
             data={
                 "hosts": records,
@@ -600,6 +611,12 @@ def main(argv=None):
     output = None
     try:
         args = parser().parse_args(argv)
+        if args.command is None or args.command == "menu":
+            if args.json_output or not sys.stdin.isatty() or not sys.stdout.isatty():
+                raise UsageError(
+                    "O menu precisa de um terminal interativo e não aceita --json. Para automação, informe um comando; consulte --help."
+                )
+            args.command = "menu"
         core.ROOT = repository(args.repo)
         args.inventory = (
             str(Path(args.inventory).expanduser().absolute())

@@ -354,3 +354,23 @@ def test_known_hosts_checks_nonstandard_port_and_pin_has_precedence(tmp_path, mo
     assert discovery.trust(host, key) == "verified" and looked_up == ["[vm.example.com]:2222"]
     host["host_key_sha256"] = "SHA256:" + "A" * 43
     assert discovery.trust(host, key) == "mismatch" and len(looked_up) == 1
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        dict(password="secret"),
+        dict(status=["valid"]),
+        dict(checked_at="invalid-date"),
+        dict(checked_at="2026-10-12T12:00:00"),
+        dict(host_key_sha256=None),
+    ],
+)
+def test_inventory_rejects_invalid_or_secret_login_validation(change):
+    host = dict(address="vm.example.com", user="ubuntu", port=22, host_key_sha256="SHA256:" + "A" * 43)
+    host["ssh_validation"] = dict(
+        status="valid", checked_at="2026-10-12T12:00:00+00:00", **core.ssh_context(host)
+    )
+    host["ssh_validation"].update(change)
+    with pytest.raises(core.InstallerError):
+        core.validate_inventory(dict(schema=1, hosts={"vm": host}, deployments={}))

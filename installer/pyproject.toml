@@ -24,7 +24,7 @@ required-version = ">=0.13.0,<0.14"
 default-groups = ["dev"]
 
 [tool.uv.build-backend]
-source-include = ["uv.lock", ".python-version", "tests/**", "scripts/**", "config/**", "inventory.example.json", "validation.md"]
+source-include = ["uv.lock", ".python-version", "tests/**", "scripts/**", "config/**", "inventory.example.json", "validation.md", "start.cmd"]
 source-exclude = [".venv/**", ".state/**", "dist/**", "private/**", "inventory.json", "**/*.key", "**/*.pem"]
 
 [tool.pytest.ini_options]

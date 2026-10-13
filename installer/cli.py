@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Entrada compatível; prefira uv run --project installer sdlc-installer."""
+"""Entrada compatível; prefira uv run --project installer python -m sdlc_installer."""
 
 import sys
 from pathlib import Path

@@ -32,13 +32,19 @@ class Remote:
     def __init__(self, host, args):
         paramiko = ssh_module()
         self.host, self.args, self.secrets = host, args, []
-        self.password = os.environ.pop("SDLC_SSH_PASSWORD", None)
-        self.sudo_password = os.environ.pop("SDLC_SUDO_PASSWORD", None)
-        passphrase = os.environ.pop("SDLC_KEY_PASSPHRASE", None)
+        password_only = getattr(args, "password_only", False)
+        validation_only = getattr(args, "validation_only", False)
+        self.password = getattr(args, "ssh_password", None)
+        if self.password is None:
+            self.password = os.environ.pop("SDLC_SSH_PASSWORD", None)
+        self.sudo_password = None if validation_only else os.environ.pop("SDLC_SUDO_PASSWORD", None)
+        passphrase = None if password_only else os.environ.pop("SDLC_KEY_PASSPHRASE", None)
         if args.ask_pass:
             self.password = getpass.getpass("Senha SSH: ")
         if args.ask_sudo_pass:
             self.sudo_password = getpass.getpass("Senha sudo: ")
+        if getattr(args, "ask_key_passphrase", False):
+            passphrase = getpass.getpass("Senha da chave privada: ")
         self.secrets = [value for value in (self.password, self.sudo_password, passphrase) if value]
         self.session = getattr(args, "session", None)
         if self.session:
@@ -64,7 +70,7 @@ class Remote:
                 host["address"],
                 port=host.get("port", 22),
                 username=host["user"],
-                key_filename=host.get("identity_file"),
+                key_filename=None if password_only else host.get("identity_file"),
                 password=self.password,
                 passphrase=passphrase,
                 allow_agent=self.password is None,
@@ -73,13 +79,15 @@ class Remote:
                 auth_timeout=getattr(args, "connect_timeout", 15),
                 banner_timeout=getattr(args, "connect_timeout", 15),
             )
+            connected = self.client.get_transport()
+            require(connected and connected.is_authenticated(), "Autenticação SSH não foi concluída.")
             if pin:
                 require(
-                    fingerprint(self.client.get_transport().get_remote_server_key()) == pin,
+                    fingerprint(connected.get_remote_server_key()) == pin,
                     "Fingerprint SSH diverge do inventário.",
                 )
-            self.client.get_transport().set_keepalive(20)
-        except Exception:
+            connected.set_keepalive(20)
+        except BaseException:
             self.client.close()
             raise
 

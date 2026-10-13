@@ -5,6 +5,7 @@ import io
 import json
 import re
 import tarfile
+from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
 
@@ -79,7 +80,16 @@ def validate_inventory(data):
     for name, host in data["hosts"].items():
         require(
             isinstance(host, dict)
-            and set(host) <= {"address", "port", "user", "identity_file", "known_hosts", "host_key_sha256"},
+            and set(host)
+            <= {
+                "address",
+                "port",
+                "user",
+                "identity_file",
+                "known_hosts",
+                "host_key_sha256",
+                "ssh_validation",
+            },
             "Host inválido; senhas não pertencem ao inventário: " + name,
         )
         require(
@@ -99,7 +109,54 @@ def validate_inventory(data):
                 re.fullmatch(r"SHA256:[A-Za-z0-9+/]{43}", host["host_key_sha256"]),
                 "Fingerprint SHA256 inválido.",
             )
+        if "ssh_validation" in host:
+            validation = host["ssh_validation"]
+            require(
+                isinstance(validation, dict)
+                and set(validation) == {"status", "checked_at", *ssh_context(host)}
+                and isinstance(validation["status"], str)
+                and validation["status"] in {"valid", "failed"},
+                "Validação SSH inválida; senhas não pertencem ao inventário.",
+            )
+            require(
+                isinstance(validation["address"], str)
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.:-]*", validation["address"])
+                and isinstance(validation["user"], str)
+                and re.fullmatch(r"[a-z_][a-z0-9_-]*", validation["user"])
+                and type(validation["port"]) is int
+                and 1 <= validation["port"] <= 65535
+                and (
+                    validation["host_key_sha256"] is None
+                    and validation["status"] == "failed"
+                    or isinstance(validation["host_key_sha256"], str)
+                    and re.fullmatch(r"SHA256:[A-Za-z0-9+/]{43}", validation["host_key_sha256"])
+                ),
+                "Destino da validação SSH inválido.",
+            )
+            try:
+                checked_at = datetime.fromisoformat(validation["checked_at"])
+            except (TypeError, ValueError):
+                raise InstallerError("Data da validação SSH inválida.") from None
+            require(checked_at.utcoffset() is not None, "Data da validação SSH exige fuso horário.")
     return data
+
+
+def ssh_context(host):
+    return dict(
+        address=host["address"],
+        user=host["user"],
+        port=host.get("port", 22),
+        host_key_sha256=host.get("host_key_sha256"),
+    )
+
+
+def ssh_validation_status(host, observed_fingerprint=None):
+    validation = host.get("ssh_validation", {})
+    if not validation or any(validation[key] != value for key, value in ssh_context(host).items()):
+        return "pending"
+    if observed_fingerprint and observed_fingerprint != host.get("host_key_sha256"):
+        return "pending"
+    return validation["status"]
 
 
 def inventory_host(path, name):

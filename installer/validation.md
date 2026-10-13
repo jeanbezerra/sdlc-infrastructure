@@ -1,5 +1,28 @@
 # Validação do instalador remoto
 
+## Aceitação de chave e validação de login pelo menu — 12/10/2026
+
+- Cadastro e acesso SSH oferecem aceitação da chave apresentada e senha sem eco. A chave é adicionada/substituída somente após autenticação concluída; uma mudança em relação à chave registrada exige confirmação de substituição. O inventário registra resultado, data UTC e destino, sem senha. A lista separa conectividade atual de último login (Válido/Falhou/Pendente).
+- Senha validada é reutilizada apenas na sessão do menu, vinculada a inventário, host, endereço, usuário, porta e chave. Encerrar o menu, trocar inventário ou salvar ajustes de acesso descarta a senha em memória. Uma alteração de destino/chave invalida o estado de login para o destino atual.
+- **127 testes aprovados no Linux/WSL**, inclusive Python 3.11; Windows/Python 3.14: **122 aprovados e 5 ignorados por dependerem de POSIX**. O menu tem 40 testes, incluindo cadastro e validação, substituição recusada/aceita, senha vazia/incorreta, redação de segredos, alterações concorrentes e reutilização limitada à sessão.
+- Quatro cenários usam um servidor SSH real em loopback: autenticação válida, recusada, parcial e troca de chave entre sondagem e login. Só a autenticação completa registra Válido; a chave divergente impede enviar a senha. Nenhum canal de comandos é aberto pelo teste de login. Segredos não apareceram no inventário nem nos logs.
+- A tabela e a seleção da nova opção foram conferidas em terminal PowerShell com sondagem do host conhecido. A autenticação com senha desta atualização foi validada no servidor local de teste; não foi solicitado nem utilizado um novo segredo das VMs do usuário.
+
+## Abertura no Windows com controle de aplicativos — 12/10/2026
+
+- Os eventos CodeIntegrity 3033/3077 apontaram bloqueio de `C:\Users\jeanbezerra\.local\bin\sdlc-installer.exe`; a assinatura Authenticode desse executável global está ausente. O [evento 3077 identifica bloqueio por política aplicada](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/app-control-for-business/operations/event-id-explanations).
+- `start.cmd` passou a usar `uv run --project installer --locked python -m sdlc_installer`. O Python 3.14.6 do ambiente do projeto apresenta assinatura Authenticode válida. A mesma entrada aceita os argumentos da CLI.
+- Launcher executado de outro diretório em terminal Windows: abriu o menu com as quatro VMs cadastradas e encerrou com código 0. Listagem JSON de serviços pelo módulo também concluiu com código 0. Nenhum novo evento de bloqueio relacionado foi encontrado durante esses testes; nenhuma política de proteção foi alterada.
+- Wheel/sdist reconstruídos e conferidos; estrutura, links Markdown e hashes dos 13 artefatos aprovados.
+
+## Terminal interativo — 12/10/2026
+
+- Iniciar `sdlc-installer` sem comando em um terminal abre o menu guiado; `menu` faz o mesmo. O launcher Windows `start.cmd` foi executado a partir de outro diretório e abriu o inventário do projeto corretamente.
+- **106 testes aprovados no Linux/WSL e no Python 3.11**. Windows/Python 3.14: **101 aprovados e 5 ignorados por dependerem de POSIX**. A cobertura inclui 24 testes do menu: navegação, saída/EOF, validação e cancelamento de formulários, cadastro de VMs desligadas, preparação e ajustes, revisão antes de instalar, execução/acompanhamento simulado, histórico, confirmação de remoção, conferência SSH e redação de segredos.
+- Navegação real em terminal PowerShell: abertura/saída, teste SSH do host `codex` em `192.168.0.250`, chave conferida e revisão do plano Grafana com cancelamento antes de iniciar. O fluxo de instalação do menu foi validado com transporte simulado; a homologação real das operações subjacentes permanece registrada nas seções anteriores.
+- CLI para automação preservada; `--json` continua retornando um único documento. Menu com `--json` ou sem terminal retorna erro de uso e não aguarda entrada. Senha de chave privada tem prompt sem eco e entra no mesmo mecanismo de redação de SSH/sudo.
+- Ruff, conferência do lock, estrutura/links e hashes dos 13 artefatos aprovados. Wheel e sdist incluem o módulo interativo; o sdist também contém `start.cmd`.
+
 ## Cadastro e descoberta do inventário — 12/10/2026
 
 - `register` cadastra hosts e gera deployments usando os modelos e caminhos do projeto; `hosts --check` sonda DNS/SSH e confere a chave; `discover` aceita IPs, nomes DNS e CIDRs explícitos, com cadastro opcional.

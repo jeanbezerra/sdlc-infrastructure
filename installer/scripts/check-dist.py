@@ -29,6 +29,7 @@ with zipfile.ZipFile(wheel) as archive:
     assert "sdlc_installer/resources/remote.py" in names
     assert "sdlc_installer/registration.py" in names
     assert "sdlc_installer/discovery.py" in names
+    assert "sdlc_installer/interactive.py" in names
     catalog = json.loads(archive.read("sdlc_installer/resources/catalog.json"))
     assert len(catalog["native"]) == 10
     (entry,) = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
@@ -41,4 +42,5 @@ with tarfile.open(source, "r:gz") as archive:
     assert all(not forbidden.intersection(Path(name).parts) for name in names)
     assert any(name.endswith("/uv.lock") for name in names)
     assert any(name.endswith("/pyproject.toml") for name in names)
+    assert any(name.endswith("/start.cmd") for name in names)
 print(f"Wheel e sdist validados: {wheel.name}, {source.name}")

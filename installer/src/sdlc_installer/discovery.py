@@ -113,5 +113,8 @@ def host_records(args):
                 row.update(probe(core.inventory_host(args.inventory, name), args.connect_timeout))
             except Exception as error:
                 row.update(state="failed", error=str(error))
+        row["ssh_login"] = core.ssh_validation_status(source, row.get("fingerprint"))
+        if source.get("ssh_validation"):
+            row["ssh_validation"] = source["ssh_validation"]
         records.append(row)
     return records
